@@ -1,6 +1,6 @@
 name = "ecommerce-financial-saas-api"
 main = "workers/src/index.js"
-account_id = "8d1812ecf11ebb0d69789f2a784d533a"
+account_id = "b2a36cb6686be9ab24fd26e955241238"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding  = "DB"
 database_name = "ecommerce-financial-saas-db"
-database_id   = "b8da9d2f-36ac-44fe-9549-6a3e921b2601"
+database_id   = "REPLACE_WITH_SAAS_D1_DATABASE_ID"
 
 # ── Environment variables ──────────────────────────────────
 [vars]

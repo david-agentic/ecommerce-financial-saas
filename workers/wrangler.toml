@@ -1,19 +1,14 @@
-name = "fin-saas-api"
+name = "ecommerce-financial-saas-api"
 main = "src/index.js"
 account_id = "b2a36cb6686be9ab24fd26e955241238"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# ── D1 Database ────────────────────────────────────────────
+# ── Dedicated SaaS D1 Database ───────────────────────────────
 [[d1_databases]]
 binding  = "DB"
-database_name = "fin-saas-db"
+database_name = "ecommerce-financial-saas-db"
 database_id   = "REPLACE_WITH_SAAS_D1_DATABASE_ID"
-
-# ── KV (rate limiting + token blacklists + short cache) ────
-[[kv_namespaces]]
-binding = "KV"
-id      = "REPLACE_WITH_SAAS_KV_NAMESPACE_ID"
 
 # ── Environment variables ──────────────────────────────────
 [vars]
