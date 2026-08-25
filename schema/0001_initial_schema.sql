@@ -1,5 +1,5 @@
 -- Multi-Tenant E-Commerce Financial Intelligence SaaS Schema
--- Philosophy: Strict Tenant Isolation (`org_id` on every table), Universal Financial Ledger, Channel Agnostic
+-- Philosophy: Strict Tenant Isolation (`org_id` on every table), Universal Financial Ledger, Channel Agnostic, Traceable Ingestion
 
 PRAGMA foreign_keys = ON;
 
@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS canonical_orders (
   id                    TEXT PRIMARY KEY,               -- ord_01h...
   org_id                TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   channel_id            TEXT NOT NULL REFERENCES sales_channels(id) ON DELETE CASCADE,
+  import_job_id         TEXT,                           -- Traceability to import batch
   external_order_id     TEXT NOT NULL,                  -- Provider's unique order identifier
   order_number          TEXT NOT NULL,                  -- Display order number (e.g. #1001)
   currency              TEXT NOT NULL DEFAULT 'GBP',
@@ -108,6 +109,7 @@ CREATE TABLE IF NOT EXISTS canonical_orders (
 
 CREATE INDEX IF NOT EXISTS idx_canonical_orders_org ON canonical_orders(org_id);
 CREATE INDEX IF NOT EXISTS idx_canonical_orders_ordered_at ON canonical_orders(org_id, ordered_at);
+CREATE INDEX IF NOT EXISTS idx_canonical_orders_import_job ON canonical_orders(import_job_id);
 
 -- ============================================================
 -- 6. CANONICAL ORDER ITEMS (LINE ITEMS & MARGINS)
@@ -121,7 +123,8 @@ CREATE TABLE IF NOT EXISTS canonical_order_items (
   qty                   INTEGER NOT NULL CHECK (qty > 0),
   unit_price            REAL NOT NULL CHECK (unit_price >= 0),
   unit_cost             REAL NOT NULL DEFAULT 0.0,
-  created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (org_id, order_id, sku)
 );
 
 CREATE INDEX IF NOT EXISTS idx_canonical_order_items_order ON canonical_order_items(order_id);
@@ -134,6 +137,7 @@ CREATE TABLE IF NOT EXISTS canonical_payouts (
   id                    TEXT PRIMARY KEY,               -- pay_01h...
   org_id                TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   channel_id            TEXT NOT NULL REFERENCES sales_channels(id) ON DELETE CASCADE,
+  import_job_id         TEXT,                           -- Traceability to import batch
   external_payout_id    TEXT NOT NULL,
   payout_date           TEXT NOT NULL,
   currency              TEXT NOT NULL DEFAULT 'GBP',
@@ -161,14 +165,16 @@ CREATE TABLE IF NOT EXISTS canonical_financial_events (
   channel_id            TEXT NOT NULL REFERENCES sales_channels(id) ON DELETE CASCADE,
   order_id              TEXT REFERENCES canonical_orders(id) ON DELETE CASCADE,
   payout_id             TEXT REFERENCES canonical_payouts(id) ON DELETE SET NULL,
-  external_event_id     TEXT,
+  import_job_id         TEXT,                           -- Traceability to import batch
+  external_event_id     TEXT NOT NULL,
   event_type            TEXT NOT NULL
                           CHECK (event_type IN ('sale', 'refund', 'platform_fee', 'processing_fee', 'shipping_fee', 'adjustment', 'payout')),
   amount                REAL NOT NULL,                  -- Positive for revenue, negative for fees/refunds
   currency              TEXT NOT NULL DEFAULT 'GBP',
   description           TEXT,
   occurred_at           TEXT NOT NULL,
-  created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (org_id, channel_id, external_event_id, event_type)
 );
 
 CREATE INDEX IF NOT EXISTS idx_financial_events_org ON canonical_financial_events(org_id);
@@ -190,7 +196,10 @@ CREATE TABLE IF NOT EXISTS import_jobs (
   processed_rows        INTEGER NOT NULL DEFAULT 0,
   successful_rows       INTEGER NOT NULL DEFAULT 0,
   skipped_rows          INTEGER NOT NULL DEFAULT 0,
+  failed_rows           INTEGER NOT NULL DEFAULT 0,
   error_summary         TEXT,
+  started_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  completed_at          TEXT,
   created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );

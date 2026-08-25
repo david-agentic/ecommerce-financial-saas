@@ -3,6 +3,7 @@
  */
 
 import { processImportJob }      from './import/importEngine.js';
+import { processCsvImport }      from './import/csvImporter.js';
 import { getFinancialSummary,
          getChannelBreakdown,
          reconcilePayouts }      from './reporting/financialEngine.js';
@@ -42,7 +43,7 @@ export default {
         return json({ ok: true, orgId, name, currency: curr }, corsHeaders);
       }
 
-      // Extract Tenant ID from Header
+      // Extract Tenant ID from Header or query parameter
       const orgId = request.headers.get('X-Org-ID') || url.searchParams.get('orgId');
 
       // 3. Connect Sales Channel
@@ -59,7 +60,7 @@ export default {
         return json({ ok: true, channelId, provider: body.provider, name: body.channelName }, corsHeaders);
       }
 
-      // 4. Data Import & Normalization Endpoint
+      // 4. Data Import & Normalization Endpoint (JSON)
       if (path === '/api/v1/import' && request.method === 'POST') {
         if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
         const body = await request.json();
@@ -75,7 +76,23 @@ export default {
         return json({ ok: true, result }, corsHeaders);
       }
 
-      // 5. Financial P&L Reporting Endpoint
+      // 5. CSV Onboarding & Mapping Endpoint
+      if (path === '/api/v1/import/csv' && request.method === 'POST') {
+        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
+        const body = await request.json();
+        const result = await processCsvImport(env.DB, {
+          orgId,
+          channelId: body.channelId,
+          csvRows: body.csvRows || [],
+          columnMapping: body.columnMapping || {},
+          importType: body.importType || 'orders',
+          sourceName: body.sourceName || 'custom_upload.csv'
+        });
+
+        return json({ ok: true, result }, corsHeaders);
+      }
+
+      // 6. Financial P&L Reporting Endpoint
       if (path === '/api/v1/reports/financial' && request.method === 'GET') {
         if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
         const start = url.searchParams.get('startDate');
@@ -84,14 +101,14 @@ export default {
         return json({ ok: true, report }, corsHeaders);
       }
 
-      // 6. Channel Performance Endpoint
+      // 7. Channel Performance Endpoint
       if (path === '/api/v1/reports/channels' && request.method === 'GET') {
         if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
         const channels = await getChannelBreakdown(env.DB, orgId);
         return json({ ok: true, channels }, corsHeaders);
       }
 
-      // 7. Payout Reconciliation Endpoint
+      // 8. Payout Reconciliation Endpoint
       if (path === '/api/v1/reconciliation/payouts' && request.method === 'GET') {
         if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
         const reconciliations = await reconcilePayouts(env.DB, orgId);
