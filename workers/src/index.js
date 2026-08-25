@@ -1,16 +1,17 @@
 /**
- * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router
- * Enforces Web Crypto Token Authentication & Server-Side Membership Authorization on all routes.
+ * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router & SPA Engine
+ * Enforces Web Crypto Token Authentication, Server-Side Membership Authorization, Guided Onboarding & COGS Engine.
  */
 
-import { handleAuthRoutes }     from './auth/routes.js';
+import { handleAuthRoutes }       from './auth/routes.js';
+import { handleOnboardingRoutes } from './onboarding/routes.js';
 import { authenticateUser,
          authorizeOrgMembership } from './auth/middleware.js';
-import { processImportJob }      from './import/importEngine.js';
-import { processCsvImport }      from './import/csvImporter.js';
+import { processImportJob }        from './import/importEngine.js';
+import { processCsvImport }        from './import/csvImporter.js';
 import { getFinancialSummary,
          getChannelBreakdown,
-         reconcilePayouts }      from './reporting/financialEngine.js';
+         reconcilePayouts }        from './reporting/financialEngine.js';
 
 const HTML_APP = `<!DOCTYPE html>
 <html lang="en">
@@ -44,7 +45,7 @@ const HTML_APP = `<!DOCTYPE html>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
     .auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-    .auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 1.25rem; }
+    .auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 1.25rem; }
     .auth-title { font-size: 1.25rem; font-weight: 700; text-align: center; }
     aside { width: 260px; background: #0b1329; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; }
     .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem; padding: 0 0.5rem; }
@@ -95,6 +96,10 @@ const HTML_APP = `<!DOCTYPE html>
     .form-control { background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; color: var(--text-main); font-size: 0.875rem; outline: none; }
     .form-control:focus { border-color: var(--accent); }
     textarea.form-control { min-height: 100px; font-family: monospace; font-size: 0.8rem; }
+    
+    .attention-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+    .attention-card.danger { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3); }
+    .empty-state { padding: 3rem 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -145,6 +150,10 @@ const HTML_APP = `<!DOCTYPE html>
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
         Sales & Orders
       </button>
+      <button class="nav-btn" onclick="showView('cogs', event)">
+        <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+        Product Costs (COGS)
+      </button>
       <button class="nav-btn" onclick="showView('payouts', event)">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
         Payout Reconciliation
@@ -176,11 +185,57 @@ const HTML_APP = `<!DOCTYPE html>
     <header>
       <div class="page-title" id="pageTitle">Overview Dashboard</div>
       <div class="header-actions">
+        <button class="btn btn-secondary" onclick="openOnboardingWizard()">Guided Setup</button>
         <button class="btn btn-primary" onclick="openImportModal()">+ Import Data</button>
       </div>
     </header>
     <div class="content-area" id="contentArea"></div>
   </main>
+
+  <!-- Guided Onboarding Modal -->
+  <div class="modal-overlay" id="onboardingWizardModal">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title" id="wizardStepTitle">Step 1: Business Setup</div>
+        <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal')">✕</button>
+      </div>
+      <div id="wizardStep1">
+        <div class="form-group" style="margin-bottom:1rem;"><label>Business Name</label><input type="text" id="obOrgName" class="form-control" placeholder="e.g. Acme Commerce Ltd"></div>
+        <div class="form-group" style="margin-bottom:1rem;"><label>Base Reporting Currency</label><select id="obCurrency" class="form-control"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></div>
+        <div class="form-group" style="margin-bottom:1rem;"><label>Primary Region</label><select id="obRegion" class="form-control"><option value="UK">United Kingdom</option><option value="US">United States</option><option value="EU">European Union</option></select></div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveOnboardingStep1()">Next: Primary Objective →</button>
+      </div>
+      <div id="wizardStep2" style="display:none;">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label>What is your primary goal for this platform?</label>
+          <select id="obObjective" class="form-control">
+            <option value="finance_intelligence">Understand My E-Commerce Finances (Sales, Margins, Payouts)</option>
+            <option value="prepare_books">Prepare My Books (Reconciliation & Clean Ledger)</option>
+            <option value="automate_accounting">Automate Accounting (Prepared for QuickBooks / Platforms)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveOnboardingStep2()">Next: Connect Channels →</button>
+      </div>
+      <div id="wizardStep3" style="display:none;">
+        <div style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Select your active sales channels to start ingesting orders & settlement payouts:</div>
+        <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>Shopify</strong> <span class="badge badge-success">Ready</span></div>
+            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
+          </div>
+          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>TikTok Shop</strong> <span class="badge badge-success">Ready</span></div>
+            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
+          </div>
+          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>Custom CSV Import</strong> <span class="badge badge-success">Header Mapper</span></div>
+            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Upload CSV</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="closeModal('onboardingWizardModal'); renderView();">Complete Setup & View Dashboard</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="importModal">
     <div class="modal" style="max-width: 620px;">
@@ -206,6 +261,8 @@ const HTML_APP = `<!DOCTYPE html>
         <textarea id="csvMappingConfig" class="form-control" placeholder='{"external_order_id": "Order Number", "gross_amount": "Total Revenue", "discount_amount": "Discounts", "platform_fee": "Gateway Fee"}'></textarea>
         <label style="margin-top: 0.5rem;">CSV Row Objects (JSON Array)</label>
         <textarea id="csvRowsPayload" class="form-control" placeholder='[{"Order Number": "INV-501", "Total Revenue": "350.00", "Discounts": "10.00", "Gateway Fee": "10.50"}]'></textarea>
+        <button class="btn btn-secondary" style="margin-top:0.5rem;" onclick="validateCsvMapping()">Preview & Validate CSV Mapping</button>
+        <div id="csvValidationBox" style="display:none; padding:0.75rem; background:#0f172a; border:1px solid var(--border); border-radius:6px; font-size:0.8rem;"></div>
       </div>
       <button class="btn btn-primary" onclick="submitImport()">Run Import & Normalization</button>
     </div>
@@ -318,26 +375,6 @@ const HTML_APP = `<!DOCTYPE html>
       renderView();
     }
 
-    async function renderView() {
-      if (!currentOrgId) return;
-      const titleMap = { overview: 'Overview Dashboard', sales: 'Sales & Unified Orders', payouts: 'Payout Reconciliation & Discrepancies', reports: 'Financial Performance & P&L', imports: 'Imports & Onboarding Jobs', integrations: 'Sales Channel Integrations', settings: 'Organization Settings' };
-      document.getElementById('pageTitle').innerText = titleMap[currentView] || 'Dashboard';
-      const container = document.getElementById('contentArea');
-      container.innerHTML = '<div style="color:var(--text-muted);">Loading server-verified financial data...</div>';
-
-      try {
-        if (currentView === 'overview') await renderOverview(container);
-        else if (currentView === 'sales') await renderSales(container);
-        else if (currentView === 'payouts') await renderPayouts(container);
-        else if (currentView === 'reports') await renderReports(container);
-        else if (currentView === 'imports') await renderImports(container);
-        else if (currentView === 'integrations') renderIntegrations(container);
-        else if (currentView === 'settings') renderSettings(container);
-      } catch (err) {
-        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger);">Authorization / Server Error: ' + err.message + '</div>';
-      }
-    }
-
     async function authFetch(url, options = {}) {
       options.headers = options.headers || {};
       options.headers['Authorization'] = 'Bearer ' + authToken;
@@ -350,12 +387,65 @@ const HTML_APP = `<!DOCTYPE html>
       return res;
     }
 
+    async function renderView() {
+      if (!currentOrgId) return;
+      const titleMap = { overview: 'Overview Dashboard', sales: 'Sales & Unified Orders', cogs: 'Product Costs (COGS)', payouts: 'Payout Reconciliation & Discrepancies', reports: 'Financial Performance & P&L', imports: 'Imports & Onboarding Jobs', integrations: 'Sales Channels', settings: 'Organization Settings' };
+      document.getElementById('pageTitle').innerText = titleMap[currentView] || 'Dashboard';
+      const container = document.getElementById('contentArea');
+      container.innerHTML = '<div style="color:var(--text-muted);">Loading server-verified financial data...</div>';
+
+      try {
+        if (currentView === 'overview') await renderOverview(container);
+        else if (currentView === 'sales') await renderSales(container);
+        else if (currentView === 'cogs') await renderCogs(container);
+        else if (currentView === 'payouts') await renderPayouts(container);
+        else if (currentView === 'reports') await renderReports(container);
+        else if (currentView === 'imports') await renderImports(container);
+        else if (currentView === 'integrations') await renderIntegrations(container);
+        else if (currentView === 'settings') renderSettings(container);
+      } catch (err) {
+        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger);">Authorization / Server Error: ' + err.message + '</div>';
+      }
+    }
+
     async function renderOverview(container) {
-      const res = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
-      const data = await res.json();
-      const m = data.report?.metrics || { grossSales: 0, netSales: 0, totalRefunds: 0, totalFees: 0, netProceeds: 0, totalCogs: 0, grossProfit: 0, grossMarginPercent: 0 };
+      const pnlRes = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
+      const pnlData = await pnlRes.json();
+      const m = pnlData.report?.metrics || { grossSales: 0, netSales: 0, totalRefunds: 0, totalFees: 0, netProceeds: 0, totalCogs: 0, grossProfit: 0, grossMarginPercent: 0 };
+
+      const attRes = await authFetch('/api/v1/reports/attention?orgId=' + currentOrgId);
+      const attData = await attRes.json();
+
+      let attentionHtml = '';
+      if (attData.attentionItems && attData.attentionItems.length > 0) {
+        attentionHtml = attData.attentionItems.map(item => \`
+          <div class="attention-card \${item.severity}">
+            <div>
+              <strong style="color:#fff;">\${item.title}</strong>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">\${item.message}</div>
+            </div>
+            <button class="btn btn-secondary" onclick="showView('\${item.actionView}')">Resolve</button>
+          </div>
+        \`).join('');
+      }
+
+      if (attData.isEmptyState) {
+        container.innerHTML = \`
+          <div class="card empty-state">
+            <div style="font-size:1.25rem; font-weight:700; color:#fff;">Welcome to FinSaaS Intelligence</div>
+            <div>No sales data or orders imported for this organization yet.</div>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+              <button class="btn btn-primary" onclick="openImportModal()">+ Import Channel Data / CSV</button>
+              <button class="btn btn-secondary" onclick="openOnboardingWizard()">Guided Setup</button>
+            </div>
+          </div>
+        \`;
+        return;
+      }
 
       container.innerHTML = \`
+        \${attentionHtml ? '<div style="display:flex; flex-direction:column; gap:0.75rem;">' + attentionHtml + '</div>' : ''}
+
         <div class="kpi-grid">
           <div class="kpi-card"><div class="kpi-label">Gross Sales</div><div class="kpi-val">£\${m.grossSales.toLocaleString()}</div><div class="kpi-sub">Total subtotal revenue</div></div>
           <div class="kpi-card"><div class="kpi-label">Net Sales</div><div class="kpi-val">£\${m.netSales.toLocaleString()}</div><div class="kpi-sub">After discounts & refunds</div></div>
@@ -376,6 +466,48 @@ const HTML_APP = `<!DOCTYPE html>
           </table>
         </div>
       \`;
+    }
+
+    async function renderCogs(container) {
+      const res = await authFetch('/api/v1/products/cogs?orgId=' + currentOrgId);
+      const data = await res.json();
+      const products = data.products || [];
+
+      let rows = products.map(p => \`
+        <tr>
+          <td><strong>\${p.sku}</strong></td>
+          <td>\${p.title}</td>
+          <td>
+            <input type="number" step="0.01" value="\${p.unit_cost}" id="cost_\${p.sku}" class="form-control" style="width:110px; display:inline-block;" />
+            <button class="btn btn-secondary" onclick="updateCost('\${p.sku}')">Save</button>
+          </td>
+          <td><span class="badge \${p.unit_cost > 0 ? 'badge-success' : 'badge-warning'}">\${p.unit_cost > 0 ? 'Costed' : 'Missing Cost'}</span></td>
+        </tr>
+      \`).join('');
+
+      if (!rows) rows = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No products discovered yet. Import orders to populate the product catalog.</td></tr>';
+
+      container.innerHTML = \`
+        \${data.isProfitCalculationIncomplete ? '<div class="attention-card warning"><div><strong>Profit Calculations Incomplete</strong><div style="font-size:0.8rem; color:var(--text-muted);">' + data.uncostedProductsCount + ' products lack unit costs. Update costs below to calculate operating profit.</div></div></div>' : ''}
+        <div class="card">
+          <div class="card-header"><div class="card-title">Product Catalog & Unit Cost Management</div></div>
+          <table>
+            <thead><tr><th>SKU</th><th>Title</th><th>Unit Cost (£)</th><th>Status</th></tr></thead>
+            <tbody>\${rows}</tbody>
+          </table>
+        </div>
+      \`;
+    }
+
+    async function updateCost(sku) {
+      const val = document.getElementById('cost_' + sku).value;
+      const res = await authFetch('/api/v1/products/cogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku, unitCost: parseFloat(val) })
+      });
+      const data = await res.json();
+      if (data.ok) { alert('Updated unit cost for SKU ' + sku); renderCogs(document.getElementById('contentArea')); }
     }
 
     async function renderSales(container) {
@@ -445,15 +577,20 @@ const HTML_APP = `<!DOCTYPE html>
       \`;
     }
 
-    function renderIntegrations(container) {
-      container.innerHTML = \`
-        <div class="kpi-grid">
-          <div class="card" style="padding:1.25rem;"><div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">Shopify</div><div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Automated order, fee, and payout normalizer for Shopify stores.</div><span class="badge badge-success">Fully Functional</span></div>
-          <div class="card" style="padding:1.25rem;"><div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">TikTok Shop</div><div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Normalizes TikTok settlements, commissions, and shipping adjustments.</div><span class="badge badge-success">Fully Functional</span></div>
-          <div class="card" style="padding:1.25rem;"><div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">WooCommerce</div><div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Parses WooCommerce orders, gateway fees, and coupons.</div><span class="badge badge-success">Fully Functional</span></div>
-          <div class="card" style="padding:1.25rem;"><div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">Custom CSV Import</div><div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Generic column mapper for historical spreadsheets and exports.</div><span class="badge badge-success">Fully Functional</span></div>
+    async function renderIntegrations(container) {
+      const res = await authFetch('/api/v1/channels/status?orgId=' + currentOrgId);
+      const data = await res.json();
+      const channels = data.channels || [];
+
+      let cardsHtml = channels.map(c => \`
+        <div class="card" style="padding:1.25rem;">
+          <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.3rem;">\${c.title}</div>
+          <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">\${c.description}</div>
+          <span class="badge \${c.status === 'Connected' ? 'badge-success' : 'badge-warning'}">\${c.status}</span>
         </div>
-      \`;
+      \`).join('');
+
+      container.innerHTML = '<div class="kpi-grid">' + cardsHtml + '</div>';
     }
 
     function renderSettings(container) {
@@ -469,11 +606,63 @@ const HTML_APP = `<!DOCTYPE html>
       \`;
     }
 
+    function openOnboardingWizard() {
+      document.getElementById('wizardStep1').style.display = 'block';
+      document.getElementById('wizardStep2').style.display = 'none';
+      document.getElementById('wizardStep3').style.display = 'none';
+      document.getElementById('wizardStepTitle').innerText = 'Step 1: Business Setup';
+      document.getElementById('onboardingWizardModal').classList.add('active');
+    }
+
+    async function saveOnboardingStep1() {
+      const name = document.getElementById('obOrgName').value.trim() || 'My Store';
+      const currency = document.getElementById('obCurrency').value;
+      const region = document.getElementById('obRegion').value;
+      await authFetch('/api/v1/onboarding/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, currency, region })
+      });
+      document.getElementById('wizardStep1').style.display = 'none';
+      document.getElementById('wizardStep2').style.display = 'block';
+      document.getElementById('wizardStepTitle').innerText = 'Step 2: Primary Objective';
+    }
+
+    async function saveOnboardingStep2() {
+      const obj = document.getElementById('obObjective').value;
+      await authFetch('/api/v1/onboarding/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryObjective: obj })
+      });
+      document.getElementById('wizardStep2').style.display = 'none';
+      document.getElementById('wizardStep3').style.display = 'block';
+      document.getElementById('wizardStepTitle').innerText = 'Step 3: Connect Sales Channels';
+    }
+
     function openImportModal() { document.getElementById('importModal').classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function toggleImportFormat(val) {
       if (val === 'csv') { document.getElementById('jsonInputGroup').style.display = 'none'; document.getElementById('csvInputGroup').style.display = 'flex'; }
       else { document.getElementById('jsonInputGroup').style.display = 'flex'; document.getElementById('csvInputGroup').style.display = 'none'; }
+    }
+
+    async function validateCsvMapping() {
+      const mapConfig = JSON.parse(document.getElementById('csvMappingConfig').value || '{}');
+      const rows = JSON.parse(document.getElementById('csvRowsPayload').value || '[]');
+      const res = await authFetch('/api/v1/import/csv/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvRows: rows, columnMapping: mapConfig })
+      });
+      const data = await res.json();
+      const box = document.getElementById('csvValidationBox');
+      box.style.display = 'block';
+      box.innerHTML = \`
+        <div style="color:var(--accent); font-weight:700; margin-bottom:0.2rem;">CSV Validation Preview:</div>
+        <div>Total Rows: \${data.totalRowsDetected} | Valid Rows: \${data.validRows} | Warnings: \${data.warningRows}</div>
+        <div>Ready to Import: <strong style="color:\${data.isReadyToImport ? 'var(--success)' : 'var(--danger)'}">\${data.isReadyToImport ? 'YES' : 'NO (Missing required fields)'}</strong></div>
+      \`;
     }
 
     async function submitImport() {
@@ -548,13 +737,19 @@ export default {
       // ─────────────────────────────────────────────────────────────
       const { user } = await authenticateUser(request, env);
 
+      // 4. Onboarding, Channel Status & COGS Routes
+      if (path.startsWith('/api/v1/onboarding/') || path === '/api/v1/channels/status' || path === '/api/v1/import/csv/validate' || path === '/api/v1/products/cogs' || path === '/api/v1/reports/attention') {
+        const obRes = await handleOnboardingRoutes(request, env, path, user);
+        if (obRes) return obRes;
+      }
+
       // Extract Org ID from header or query parameter
       const targetOrgId = request.headers.get('X-Org-ID') || url.searchParams.get('orgId');
       if (!targetOrgId && path !== '/api/v1/orgs/create') {
         return jsonError(400, 'Missing target organization ID (X-Org-ID header required)', corsHeaders);
       }
 
-      // 4. Create Organization (Authenticated user creates & becomes owner)
+      // 5. Create Organization (Authenticated user creates & becomes owner)
       if (path === '/api/v1/orgs/create' && request.method === 'POST') {
         const body = await request.json();
         const orgId = `org_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -577,7 +772,7 @@ export default {
       const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'viewer');
       const verifiedOrgId = membership.org_id;
 
-      // 5. Connect Sales Channel (Requires admin or owner role)
+      // 6. Connect Sales Channel (Requires admin or owner role)
       if (path === '/api/v1/channels/connect' && request.method === 'POST') {
         await authorizeOrgMembership(env, user.id, targetOrgId, 'admin');
         const body = await request.json();
@@ -591,7 +786,7 @@ export default {
         return json({ ok: true, channelId, provider: body.provider, name: body.channelName }, corsHeaders);
       }
 
-      // 6. Data Import & Normalization Endpoint (Requires member role)
+      // 7. Data Import & Normalization Endpoint (Requires member role)
       if (path === '/api/v1/import' && request.method === 'POST') {
         await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
         const body = await request.json();
@@ -607,7 +802,7 @@ export default {
         return json({ ok: true, result }, corsHeaders);
       }
 
-      // 7. CSV Onboarding & Mapping Endpoint (Requires member role)
+      // 8. CSV Onboarding & Mapping Endpoint (Requires member role)
       if (path === '/api/v1/import/csv' && request.method === 'POST') {
         await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
         const body = await request.json();
@@ -623,7 +818,7 @@ export default {
         return json({ ok: true, result }, corsHeaders);
       }
 
-      // 8. Financial P&L Reporting Endpoint
+      // 9. Financial P&L Reporting Endpoint
       if (path === '/api/v1/reports/financial' && request.method === 'GET') {
         const start = url.searchParams.get('startDate');
         const end   = url.searchParams.get('endDate');
@@ -631,13 +826,13 @@ export default {
         return json({ ok: true, report }, corsHeaders);
       }
 
-      // 9. Channel Performance Endpoint
+      // 10. Channel Performance Endpoint
       if (path === '/api/v1/reports/channels' && request.method === 'GET') {
         const channels = await getChannelBreakdown(env.DB, verifiedOrgId);
         return json({ ok: true, channels }, corsHeaders);
       }
 
-      // 10. Payout Reconciliation Endpoint
+      // 11. Payout Reconciliation Endpoint
       if (path === '/api/v1/reconciliation/payouts' && request.method === 'GET') {
         const reconciliations = await reconcilePayouts(env.DB, verifiedOrgId);
         return json({ ok: true, reconciliations }, corsHeaders);

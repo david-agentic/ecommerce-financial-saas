@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS organizations (
   name                  TEXT NOT NULL,
   base_currency         TEXT NOT NULL DEFAULT 'GBP',
   timezone              TEXT NOT NULL DEFAULT 'Europe/London',
+  primary_objective     TEXT NOT NULL DEFAULT 'finance_intelligence',
+  region                TEXT NOT NULL DEFAULT 'UK',
   status                TEXT NOT NULL DEFAULT 'Active'
                           CHECK (status IN ('Active','Suspended','Archived')),
   created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -67,8 +69,10 @@ CREATE TABLE IF NOT EXISTS sales_channels (
   channel_name          TEXT NOT NULL,
   external_store_id     TEXT,
   status                TEXT NOT NULL DEFAULT 'Connected'
-                          CHECK (status IN ('Connected', 'Disconnected', 'SyncError', 'Paused')),
+                          CHECK (status IN ('Connected', 'Disconnected', 'SyncError', 'Paused', 'ReadyToConnect', 'Importing', 'RequiresAttention')),
   credentials_json      TEXT,                           -- Isolated/encrypted token payload
+  last_sync_at          TEXT,
+  last_error            TEXT,
   created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
