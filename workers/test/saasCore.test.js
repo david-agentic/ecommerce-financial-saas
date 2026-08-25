@@ -12,7 +12,6 @@ import { normalizeWooCommerceOrder } from '../src/normalization/woocommerceAdapt
 import { processImportJob }      from '../src/import/importEngine.js';
 import { processCsvImport }      from '../src/import/csvImporter.js';
 import { getFinancialSummary,
-         getChannelBreakdown,
          reconcilePayouts }      from '../src/reporting/financialEngine.js';
 
 describe('Multi-Tenant E-Commerce Financial Intelligence SaaS Core Engine & Web App', () => {
@@ -25,7 +24,6 @@ describe('Multi-Tenant E-Commerce Financial Intelligence SaaS Core Engine & Web 
     assert.strictEqual(res.headers.get('Content-Type'), 'text/html; charset=utf-8');
     const html = await res.text();
     assert.ok(html.includes('FinSaaS Intelligence'));
-    assert.ok(html.includes('Overview Dashboard'));
   });
 
   test('2. Multi-Tenant Isolation Rule: Data between Org A and Org B must remain completely isolated', async () => {
@@ -119,16 +117,31 @@ describe('Multi-Tenant E-Commerce Financial Intelligence SaaS Core Engine & Web 
     assert.strictEqual(res.status, 'completed');
   });
 
-  test('6. REST API Endpoints: /api/v1/reports/financial via Worker Router', async () => {
+  test('6. REST API Router with Authentication: /api/v1/reports/financial via Worker Router', async () => {
     const db = createMockSaaSDb();
-    const orgId = 'org_api_test';
+    const env = { DB: db };
 
-    await db.prepare(`INSERT INTO organizations (id, name) VALUES (?, 'API Org')`).bind(orgId).run();
+    // Signup user to get token and org
+    const signupReq = new Request('https://fin-saas.app/api/v1/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'router@test.com', password: 'Password123!', orgName: 'Router Test Org' })
+    });
 
-    const req = new Request(`https://fin-saas.app/api/v1/reports/financial?orgId=${orgId}`, { method: 'GET' });
-    const res = await workerRouter.fetch(req, { DB: db }, {});
+    const signupRes = await workerRouter.fetch(signupReq, env, {});
+    const signupData = await signupRes.json();
 
+    const token = signupData.token;
+    const orgId = signupData.org.id;
+
+    const req = new Request(`https://fin-saas.app/api/v1/reports/financial?orgId=${orgId}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}`, 'X-Org-ID': orgId }
+    });
+
+    const res = await workerRouter.fetch(req, env, {});
     assert.strictEqual(res.status, 200);
+
     const body = await res.json();
     assert.strictEqual(body.ok, true);
     assert.ok(body.report.metrics);

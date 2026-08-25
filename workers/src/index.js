@@ -1,7 +1,11 @@
 /**
- * Multi-Tenant E-Commerce Financial Intelligence SaaS API & Web Application Router
+ * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router
+ * Enforces Web Crypto Token Authentication & Server-Side Membership Authorization on all routes.
  */
 
+import { handleAuthRoutes }     from './auth/routes.js';
+import { authenticateUser,
+         authorizeOrgMembership } from './auth/middleware.js';
 import { processImportJob }      from './import/importEngine.js';
 import { processCsvImport }      from './import/csvImporter.js';
 import { getFinancialSummary,
@@ -39,6 +43,9 @@ const HTML_APP = `<!DOCTYPE html>
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+    .auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 1.25rem; }
+    .auth-title { font-size: 1.25rem; font-weight: 700; text-align: center; }
     aside { width: 260px; background: #0b1329; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; }
     .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem; padding: 0 0.5rem; }
     .brand-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #38bdf8, #818cf8); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0f172a; font-size: 0.9rem; }
@@ -91,16 +98,43 @@ const HTML_APP = `<!DOCTYPE html>
   </style>
 </head>
 <body>
+
+  <!-- Auth Screen -->
+  <div class="auth-overlay" id="authScreen">
+    <div class="auth-card">
+      <div class="brand-icon" style="margin: 0 auto 0.5rem auto; width:36px; height:36px; font-size:1.1rem;">F</div>
+      <div class="auth-title" id="authTitle">Sign In to FinSaaS</div>
+      <div class="form-group" id="nameGroup" style="display:none;">
+        <label>Full Name</label>
+        <input type="text" id="authName" class="form-control" placeholder="John Doe">
+      </div>
+      <div class="form-group" id="orgNameGroup" style="display:none;">
+        <label>Initial Organization Name</label>
+        <input type="text" id="authOrgName" class="form-control" placeholder="My Commerce Store">
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="authEmail" class="form-control" placeholder="john@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" class="form-control" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" style="justify-content:center;" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
+      <div style="text-align:center; font-size:0.8rem; color:var(--text-muted); cursor:pointer;" onclick="toggleAuthMode()" id="authToggleText">
+        Need an account? Sign up & Create Organization
+      </div>
+    </div>
+  </div>
+
   <aside>
     <div class="brand">
       <div class="brand-icon">F</div>
       <span>FinSaaS Intelligence</span>
     </div>
     <div class="org-selector">
-      <label>Active Tenant</label>
-      <select id="orgSelect" onchange="switchOrg(this.value)">
-        <option value="org_demo_1">Alpha Commerce (GBP)</option>
-      </select>
+      <label>Authorized Tenant</label>
+      <select id="orgSelect" onchange="switchOrg(this.value)"></select>
     </div>
     <nav>
       <button class="nav-btn active" onclick="showView('overview', event)">
@@ -133,8 +167,8 @@ const HTML_APP = `<!DOCTYPE html>
       </button>
     </nav>
     <div class="sidebar-footer">
-      <div>Multi-Tenant SaaS v1.0</div>
-      <div>Isolated D1 Database Engine</div>
+      <div id="userInfo">Not Authenticated</div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:0.5rem; justify-content:center;" onclick="logout()">Sign Out</button>
     </div>
   </aside>
 
@@ -142,34 +176,11 @@ const HTML_APP = `<!DOCTYPE html>
     <header>
       <div class="page-title" id="pageTitle">Overview Dashboard</div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="openNewOrgModal()">+ New Tenant</button>
         <button class="btn btn-primary" onclick="openImportModal()">+ Import Data</button>
       </div>
     </header>
     <div class="content-area" id="contentArea"></div>
   </main>
-
-  <div class="modal-overlay" id="orgModal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">Create New Organization Tenant</div>
-        <button class="btn btn-secondary" onclick="closeModal('orgModal')">✕</button>
-      </div>
-      <div class="form-group">
-        <label>Organization Name</label>
-        <input type="text" id="newOrgName" class="form-control" placeholder="e.g. Beta E-Commerce Ltd">
-      </div>
-      <div class="form-group">
-        <label>Base Currency</label>
-        <select id="newOrgCurr" class="form-control">
-          <option value="GBP">GBP (£)</option>
-          <option value="USD">USD ($)</option>
-          <option value="EUR">EUR (€)</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="createOrganization()">Create Organization</button>
-    </div>
-  </div>
 
   <div class="modal-overlay" id="importModal">
     <div class="modal" style="max-width: 620px;">
@@ -201,31 +212,101 @@ const HTML_APP = `<!DOCTYPE html>
   </div>
 
   <script>
-    let currentOrgId = 'org_demo_1';
+    let authToken = localStorage.getItem('fin_saas_token') || null;
+    let currentUser = null;
+    let userOrgs = [];
+    let currentOrgId = null;
     let currentView = 'overview';
-    const sampleOrgs = [{ id: 'org_demo_1', name: 'Alpha Commerce (GBP)', currency: 'GBP' }];
+    let isSignupMode = false;
 
     async function init() {
+      if (!authToken) {
+        showAuthScreen();
+        return;
+      }
       try {
-        const res = await fetch('/api/v1/orgs/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'Alpha Commerce Ltd', currency: 'GBP' })
+        const res = await fetch('/api/v1/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
         });
         const data = await res.json();
         if (data.ok) {
-          currentOrgId = data.orgId;
-          sampleOrgs[0].id = currentOrgId;
-          updateOrgSelect();
+          currentUser = data.user;
+          userOrgs = data.orgs || [];
+          if (userOrgs.length > 0) {
+            currentOrgId = userOrgs[0].id;
+            updateOrgSelect();
+            hideAuthScreen();
+            renderView();
+          } else {
+            showAuthScreen();
+          }
+        } else {
+          logout();
         }
-      } catch (e) { console.warn('API init:', e); }
-      renderView();
+      } catch (e) {
+        showAuthScreen();
+      }
     }
+
+    function toggleAuthMode() {
+      isSignupMode = !isSignupMode;
+      document.getElementById('authTitle').innerText = isSignupMode ? 'Create Your Account & Organization' : 'Sign In to FinSaaS';
+      document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Sign Up & Onboard' : 'Sign In';
+      document.getElementById('authToggleText').innerText = isSignupMode ? 'Already have an account? Sign in' : 'Need an account? Sign up & Create Organization';
+      document.getElementById('nameGroup').style.display = isSignupMode ? 'flex' : 'none';
+      document.getElementById('orgNameGroup').style.display = isSignupMode ? 'flex' : 'none';
+    }
+
+    async function handleAuthSubmit() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const endpoint = isSignupMode ? '/api/v1/auth/signup' : '/api/v1/auth/login';
+
+      const payload = { email, password };
+      if (isSignupMode) {
+        payload.name = document.getElementById('authName').value.trim() || 'Merchant Owner';
+        payload.orgName = document.getElementById('authOrgName').value.trim() || 'My Commerce Business';
+      }
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          authToken = data.token;
+          localStorage.setItem('fin_saas_token', authToken);
+          await init();
+        } else {
+          alert('Authentication Error: ' + data.error);
+        }
+      } catch (err) {
+        alert('Network Error: ' + err.message);
+      }
+    }
+
+    function logout() {
+      if (authToken) {
+        fetch('/api/v1/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken } });
+      }
+      authToken = null;
+      currentUser = null;
+      userOrgs = [];
+      currentOrgId = null;
+      localStorage.removeItem('fin_saas_token');
+      showAuthScreen();
+    }
+
+    function showAuthScreen() { document.getElementById('authScreen').style.display = 'flex'; }
+    function hideAuthScreen() { document.getElementById('authScreen').style.display = 'none'; }
 
     function updateOrgSelect() {
       const select = document.getElementById('orgSelect');
-      select.innerHTML = sampleOrgs.map(o => \`<option value="\${o.id}">\${o.name}</option>\`).join('');
+      select.innerHTML = userOrgs.map(o => '<option value="' + o.id + '">' + o.name + ' (' + o.role + ')</option>').join('');
       select.value = currentOrgId;
+      document.getElementById('userInfo').innerText = currentUser ? currentUser.name + ' (' + currentUser.email + ')' : '';
     }
 
     function switchOrg(newOrgId) { currentOrgId = newOrgId; renderView(); }
@@ -238,10 +319,11 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     async function renderView() {
+      if (!currentOrgId) return;
       const titleMap = { overview: 'Overview Dashboard', sales: 'Sales & Unified Orders', payouts: 'Payout Reconciliation & Discrepancies', reports: 'Financial Performance & P&L', imports: 'Imports & Onboarding Jobs', integrations: 'Sales Channel Integrations', settings: 'Organization Settings' };
       document.getElementById('pageTitle').innerText = titleMap[currentView] || 'Dashboard';
       const container = document.getElementById('contentArea');
-      container.innerHTML = '<div style="color:var(--text-muted);">Loading live financial data...</div>';
+      container.innerHTML = '<div style="color:var(--text-muted);">Loading server-verified financial data...</div>';
 
       try {
         if (currentView === 'overview') await renderOverview(container);
@@ -252,12 +334,24 @@ const HTML_APP = `<!DOCTYPE html>
         else if (currentView === 'integrations') renderIntegrations(container);
         else if (currentView === 'settings') renderSettings(container);
       } catch (err) {
-        container.innerHTML = \`<div class="card" style="padding:1.5rem; color:var(--danger);">Error loading data: \${err.message}</div>\`;
+        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger);">Authorization / Server Error: ' + err.message + '</div>';
       }
     }
 
+    async function authFetch(url, options = {}) {
+      options.headers = options.headers || {};
+      options.headers['Authorization'] = 'Bearer ' + authToken;
+      options.headers['X-Org-ID'] = currentOrgId;
+      const res = await fetch(url, options);
+      if (res.status === 401 || res.status === 403) {
+        const data = await res.json();
+        throw new Error(data.error || 'Unauthorized tenant access');
+      }
+      return res;
+    }
+
     async function renderOverview(container) {
-      const res = await fetch(\`/api/v1/reports/financial?orgId=\${currentOrgId}\`);
+      const res = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
       const data = await res.json();
       const m = data.report?.metrics || { grossSales: 0, netSales: 0, totalRefunds: 0, totalFees: 0, netProceeds: 0, totalCogs: 0, grossProfit: 0, grossMarginPercent: 0 };
 
@@ -297,7 +391,7 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     async function renderPayouts(container) {
-      const res = await fetch(\`/api/v1/reconciliation/payouts?orgId=\${currentOrgId}\`);
+      const res = await authFetch('/api/v1/reconciliation/payouts?orgId=' + currentOrgId);
       const data = await res.json();
       const recs = data.reconciliations || [];
       let rowsHtml = recs.map(r => \`
@@ -310,12 +404,12 @@ const HTML_APP = `<!DOCTYPE html>
           <td><span class="badge \${r.status === 'matched' ? 'badge-success' : 'badge-danger'}">\${r.status}</span></td>
         </tr>
       \`).join('');
-      if (!rowsHtml) rowsHtml = \`<tr><td colspan="6" style="color:var(--text-muted); text-align:center;">No payout settlements recorded yet for this organization.</td></tr>\`;
-      container.innerHTML = \`<div class="card"><div class="card-header"><div class="card-title">Payout Settlement Matching & Discrepancies</div></div><table><thead><tr><th>Settlement Ref</th><th>Payout Date</th><th>Recorded Payout</th><th>Expected Net</th><th>Discrepancy</th><th>Status</th></tr></thead><tbody>\${rowsHtml}</tbody></table></div>\`;
+      if (!rowsHtml) rowsHtml = '<tr><td colspan="6" style="color:var(--text-muted); text-align:center;">No payout settlements recorded yet for this organization.</td></tr>';
+      container.innerHTML = '<div class="card"><div class="card-header"><div class="card-title">Payout Settlement Matching & Discrepancies</div></div><table><thead><tr><th>Settlement Ref</th><th>Payout Date</th><th>Recorded Payout</th><th>Expected Net</th><th>Discrepancy</th><th>Status</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
     }
 
     async function renderReports(container) {
-      const res = await fetch(\`/api/v1/reports/financial?orgId=\${currentOrgId}\`);
+      const res = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
       const data = await res.json();
       const m = data.report?.metrics || {};
       container.innerHTML = \`
@@ -363,17 +457,18 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     function renderSettings(container) {
+      const activeOrg = userOrgs.find(o => o.id === currentOrgId) || {};
       container.innerHTML = \`
         <div class="card" style="max-width:600px; padding:1.5rem;">
-          <div class="card-title" style="margin-bottom:1rem;">Organization Profile</div>
+          <div class="card-title" style="margin-bottom:1rem;">Organization Profile & Permissions</div>
           <div class="form-group" style="margin-bottom:1rem;"><label>Tenant ID</label><input type="text" class="form-control" value="\${currentOrgId}" readonly style="opacity:0.7;"></div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Base Reporting Currency</label><input type="text" class="form-control" value="GBP (£)" readonly style="opacity:0.7;"></div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Timezone</label><input type="text" class="form-control" value="Europe/London" readonly style="opacity:0.7;"></div>
+          <div class="form-group" style="margin-bottom:1rem;"><label>Organization Name</label><input type="text" class="form-control" value="\${activeOrg.name || ''}" readonly style="opacity:0.7;"></div>
+          <div class="form-group" style="margin-bottom:1rem;"><label>Your Server-Verified Role</label><input type="text" class="form-control" value="\${(activeOrg.role || 'viewer').toUpperCase()}" readonly style="opacity:0.7; font-weight:700; color:var(--accent);"></div>
+          <div class="form-group" style="margin-bottom:1rem;"><label>Base Currency</label><input type="text" class="form-control" value="\${activeOrg.base_currency || 'GBP'}" readonly style="opacity:0.7;"></div>
         </div>
       \`;
     }
 
-    function openNewOrgModal() { document.getElementById('orgModal').classList.add('active'); }
     function openImportModal() { document.getElementById('importModal').classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function toggleImportFormat(val) {
@@ -381,26 +476,12 @@ const HTML_APP = `<!DOCTYPE html>
       else { document.getElementById('jsonInputGroup').style.display = 'flex'; document.getElementById('csvInputGroup').style.display = 'none'; }
     }
 
-    async function createOrganization() {
-      const name = document.getElementById('newOrgName').value.trim() || 'New E-Commerce Business';
-      const currency = document.getElementById('newOrgCurr').value;
-      const res = await fetch('/api/v1/orgs/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, currency }) });
-      const data = await res.json();
-      if (data.ok) {
-        sampleOrgs.push({ id: data.orgId, name: \`\${name} (\${currency})\`, currency });
-        currentOrgId = data.orgId;
-        updateOrgSelect();
-        closeModal('orgModal');
-        renderView();
-      }
-    }
-
     async function submitImport() {
       const provider = document.getElementById('importProvider').value;
       let endpoint = '/api/v1/import';
       let payload = {};
 
-      const chnRes = await fetch('/api/v1/channels/connect', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Org-ID': currentOrgId }, body: JSON.stringify({ provider, channelName: \`\${provider.toUpperCase()} Channel\` }) });
+      const chnRes = await authFetch('/api/v1/channels/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, channelName: provider.toUpperCase() + ' Channel' }) });
       const chnData = await chnRes.json();
       const channelId = chnData.channelId;
 
@@ -414,13 +495,13 @@ const HTML_APP = `<!DOCTYPE html>
         payload = { channelId, provider, rows };
       }
 
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Org-ID': currentOrgId }, body: JSON.stringify(payload) });
+      const res = await authFetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (data.ok) {
-        alert(\`Import Complete! Total: \${data.result.totalRows} | Successful: \${data.result.successfulRows} | Skipped/Failed: \${data.result.skippedRows + (data.result.failedRows || 0)}\`);
+        alert('Import Complete! Total: ' + data.result.totalRows + ' | Successful: ' + data.result.successfulRows + ' | Skipped/Failed: ' + (data.result.skippedRows + (data.result.failedRows || 0)));
         closeModal('importModal');
         renderView();
-      } else { alert(\`Import Error: \${data.error}\`); }
+      } else { alert('Import Error: ' + data.error); }
     }
 
     window.onload = init;
@@ -444,22 +525,40 @@ export default {
     const path = url.pathname;
 
     try {
-      // Serve Web SaaS Dashboard SPA
+      // 1. Serve Web SaaS Dashboard SPA
       if (path === '/' || path === '/app' || path === '/index.html') {
         return new Response(HTML_APP, {
           headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
         });
       }
 
-      // Health Check
+      // 2. Health Check
       if (path === '/health') {
         return json({ ok: true, service: 'fin-saas-api', version: '1.0.0', ts: new Date().toISOString() }, corsHeaders);
       }
 
-      // Organization Provisioning
+      // 3. Public Auth Routes (signup, login, me, logout)
+      if (path.startsWith('/api/v1/auth/')) {
+        const authRes = await handleAuthRoutes(request, env, path);
+        if (authRes) return authRes;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // PROTECTED ROUTES BELOW (Require Authentication & Org Authorization)
+      // ─────────────────────────────────────────────────────────────
+      const { user } = await authenticateUser(request, env);
+
+      // Extract Org ID from header or query parameter
+      const targetOrgId = request.headers.get('X-Org-ID') || url.searchParams.get('orgId');
+      if (!targetOrgId && path !== '/api/v1/orgs/create') {
+        return jsonError(400, 'Missing target organization ID (X-Org-ID header required)', corsHeaders);
+      }
+
+      // 4. Create Organization (Authenticated user creates & becomes owner)
       if (path === '/api/v1/orgs/create' && request.method === 'POST') {
         const body = await request.json();
         const orgId = `org_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const memId = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         const name  = body.name || 'My E-Commerce Business';
         const curr  = body.currency || 'GBP';
 
@@ -467,32 +566,37 @@ export default {
           INSERT INTO organizations (id, name, base_currency) VALUES (?, ?, ?)
         `).bind(orgId, name, curr).run();
 
-        return json({ ok: true, orgId, name, currency: curr }, corsHeaders);
+        await env.DB.prepare(`
+          INSERT INTO org_memberships (id, org_id, user_id, role) VALUES (?, ?, ?, 'owner')
+        `).bind(memId, orgId, user.id).run();
+
+        return json({ ok: true, orgId, name, currency: curr, role: 'owner' }, corsHeaders);
       }
 
-      // Extract Tenant ID from Header or query parameter
-      const orgId = request.headers.get('X-Org-ID') || url.searchParams.get('orgId');
+      // Verify Server-Side Membership for Target Org
+      const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'viewer');
+      const verifiedOrgId = membership.org_id;
 
-      // Connect Sales Channel
+      // 5. Connect Sales Channel (Requires admin or owner role)
       if (path === '/api/v1/channels/connect' && request.method === 'POST') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
+        await authorizeOrgMembership(env, user.id, targetOrgId, 'admin');
         const body = await request.json();
         const channelId = `chn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
         await env.DB.prepare(`
           INSERT INTO sales_channels (id, org_id, provider, channel_name, external_store_id)
           VALUES (?, ?, ?, ?, ?)
-        `).bind(channelId, orgId, body.provider, body.channelName, body.externalStoreId || null).run();
+        `).bind(channelId, verifiedOrgId, body.provider, body.channelName, body.externalStoreId || null).run();
 
         return json({ ok: true, channelId, provider: body.provider, name: body.channelName }, corsHeaders);
       }
 
-      // Data Import & Normalization Endpoint (JSON)
+      // 6. Data Import & Normalization Endpoint (Requires member role)
       if (path === '/api/v1/import' && request.method === 'POST') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
+        await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
         const body = await request.json();
         const result = await processImportJob(env.DB, {
-          orgId,
+          orgId: verifiedOrgId,
           channelId: body.channelId,
           provider: body.provider,
           rows: body.rows || [],
@@ -503,12 +607,12 @@ export default {
         return json({ ok: true, result }, corsHeaders);
       }
 
-      // CSV Onboarding & Mapping Endpoint
+      // 7. CSV Onboarding & Mapping Endpoint (Requires member role)
       if (path === '/api/v1/import/csv' && request.method === 'POST') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
+        await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
         const body = await request.json();
         const result = await processCsvImport(env.DB, {
-          orgId,
+          orgId: verifiedOrgId,
           channelId: body.channelId,
           csvRows: body.csvRows || [],
           columnMapping: body.columnMapping || {},
@@ -519,26 +623,23 @@ export default {
         return json({ ok: true, result }, corsHeaders);
       }
 
-      // Financial P&L Reporting Endpoint
+      // 8. Financial P&L Reporting Endpoint
       if (path === '/api/v1/reports/financial' && request.method === 'GET') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
         const start = url.searchParams.get('startDate');
         const end   = url.searchParams.get('endDate');
-        const report = await getFinancialSummary(env.DB, orgId, start, end);
+        const report = await getFinancialSummary(env.DB, verifiedOrgId, start, end);
         return json({ ok: true, report }, corsHeaders);
       }
 
-      // Channel Performance Endpoint
+      // 9. Channel Performance Endpoint
       if (path === '/api/v1/reports/channels' && request.method === 'GET') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
-        const channels = await getChannelBreakdown(env.DB, orgId);
+        const channels = await getChannelBreakdown(env.DB, verifiedOrgId);
         return json({ ok: true, channels }, corsHeaders);
       }
 
-      // Payout Reconciliation Endpoint
+      // 10. Payout Reconciliation Endpoint
       if (path === '/api/v1/reconciliation/payouts' && request.method === 'GET') {
-        if (!orgId) return jsonError(400, 'Missing X-Org-ID header', corsHeaders);
-        const reconciliations = await reconcilePayouts(env.DB, orgId);
+        const reconciliations = await reconcilePayouts(env.DB, verifiedOrgId);
         return json({ ok: true, reconciliations }, corsHeaders);
       }
 
@@ -546,21 +647,18 @@ export default {
 
     } catch (err) {
       console.error('SaaS API Error:', err);
-      return jsonError(500, err.message || 'Internal Server Error', corsHeaders);
+      const isAuthErr = err.message.startsWith('UNAUTHENTICATED');
+      const isForbErr = err.message.startsWith('FORBIDDEN');
+      const status = isAuthErr ? 401 : (isForbErr ? 403 : (err.message.startsWith('BAD_REQUEST') ? 400 : 500));
+      return jsonError(status, err.message || 'Internal Server Error', corsHeaders);
     }
   }
 };
 
 function json(data, headers, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  });
+  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
 function jsonError(status, message, headers) {
-  return new Response(JSON.stringify({ ok: false, error: message }), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  });
+  return new Response(JSON.stringify({ ok: false, error: message }), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
