@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Intelligence SaaS — Multi-Tenant Commerce Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.1);
+      --border: #334155;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      width: 260px;
+      background-color: #0b1329;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      padding: 0 0.5rem;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #0f172a;
+      font-size: 0.9rem;
+    }
+
+    .org-selector {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .org-selector label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .org-selector select {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.875rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    nav { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      transition: all 0.15s ease;
+    }
+    .nav-btn:hover { background-color: var(--bg-secondary); color: var(--text-main); }
+    .nav-btn.active { background-color: rgba(56, 189, 248, 0.12); color: var(--accent); font-weight: 600; }
+
+    .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    .sidebar-footer {
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* Main Area */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background-color: var(--bg-primary);
+    }
+
+    header {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #0b1329;
+    }
+    .page-title { font-size: 1.25rem; font-weight: 700; }
+    .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary { background-color: var(--accent); color: #0f172a; }
+    .btn-primary:hover { background-color: var(--accent-hover); }
+    .btn-secondary { background-color: var(--bg-secondary); border-color: var(--border); color: var(--text-main); }
+    .btn-secondary:hover { background-color: var(--bg-card-hover); }
+
+    .content-area { padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.75rem; }
+
+    /* Cards & KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+    .kpi-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+    .kpi-val { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .kpi-sub { font-size: 0.75rem; color: var(--text-dim); }
+
+    /* Tables */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title { font-size: 1rem; font-weight: 600; }
+    
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem; }
+    th { background-color: #141f36; color: var(--text-muted); font-weight: 600; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); }
+    td { padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background-color: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.725rem;
+      font-weight: 600;
+      border-radius: 12px;
+      text-transform: capitalize;
+    }
+    .badge-success { background-color: var(--success-bg); color: var(--success); }
+    .badge-warning { background-color: var(--warning-bg); color: var(--warning); }
+    .badge-danger { background-color: var(--danger-bg); color: var(--danger); }
+
+    /* Modals & Wizards */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 540px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-weight: 700; font-size: 1.1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .form-control {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.6rem 0.75rem;
+      color: var(--text-main);
+      font-size: 0.875rem;
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--accent); }
+    textarea.form-control { min-height: 100px; font-family: monospace; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="brand">
+      <div class="brand-icon">F</div>
+      <span>FinSaaS Intelligence</span>
+    </div>
+
+    <div class="org-selector">
+      <label>Active Tenant</label>
+      <select id="orgSelect" onchange="switchOrg(this.value)">
+        <option value="org_demo_1">Alpha Commerce (GBP)</option>
+      </select>
+    </div>
+
+    <nav>
+      <button class="nav-btn active" onclick="showView('overview')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Overview
+      </button>
+      <button class="nav-btn" onclick="showView('sales')">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+        Sales & Orders
+      </button>
+      <button class="nav-btn" onclick="showView('payouts')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        Payout Reconciliation
+      </button>
+      <button class="nav-btn" onclick="showView('reports')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        Reports (P&L)
+      </button>
+      <button class="nav-btn" onclick="showView('imports')">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Imports & Onboarding
+      </button>
+      <button class="nav-btn" onclick="showView('integrations')">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        Sales Channels
+      </button>
+      <button class="nav-btn" onclick="showView('settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Organization Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div>Multi-Tenant SaaS v1.0</div>
+      <div>Isolated D1 Database Engine</div>
+    </div>
+  </aside>
+
+  <!-- Main Work Area -->
+  <main>
+    <header>
+      <div class="page-title" id="pageTitle">Overview Dashboard</div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="openNewOrgModal()">+ New Tenant</button>
+        <button class="btn btn-primary" onclick="openImportModal()">+ Import Data</button>
+      </div>
+    </header>
+
+    <div class="content-area" id="contentArea">
+      <!-- Dynamic Content Rendered Here -->
+    </div>
+  </main>
+
+  <!-- New Org Modal -->
+  <div class="modal-overlay" id="orgModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Create New Organization Tenant</div>
+        <button class="btn btn-secondary" onclick="closeModal('orgModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Organization Name</label>
+        <input type="text" id="newOrgName" class="form-control" placeholder="e.g. Beta E-Commerce Ltd">
+      </div>
+      <div class="form-group">
+        <label>Base Currency</label>
+        <select id="newOrgCurr" class="form-control">
+          <option value="GBP">GBP (£)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="createOrganization()">Create Organization</button>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal" style="max-width: 620px;">
+      <div class="modal-header">
+        <div class="modal-title">Import & Normalize Channel Data</div>
+        <button class="btn btn-secondary" onclick="closeModal('importModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Select Channel / Format</label>
+        <select id="importProvider" class="form-control" onchange="toggleImportFormat(this.value)">
+          <option value="shopify">Shopify (JSON Payload)</option>
+          <option value="tiktok">TikTok Shop (JSON Payload)</option>
+          <option value="woocommerce">WooCommerce (JSON Payload)</option>
+          <option value="csv">Custom CSV Import (Header Mapper)</option>
+        </select>
+      </div>
+      <div class="form-group" id="jsonInputGroup">
+        <label>JSON Data Array</label>
+        <textarea id="importJsonPayload" class="form-control" placeholder='[{"id": "1001", "name": "#1001", "subtotal_price": 250.00, "processing_fee": 7.50}]'></textarea>
+      </div>
+      <div class="form-group" id="csvInputGroup" style="display:none;">
+        <label>CSV Header Mapping (JSON)</label>
+        <textarea id="csvMappingConfig" class="form-control" placeholder='{"external_order_id": "Order Number", "gross_amount": "Total Revenue", "discount_amount": "Discounts", "platform_fee": "Gateway Fee"}'></textarea>
+        <label style="margin-top: 0.5rem;">CSV Row Objects (JSON Array)</label>
+        <textarea id="csvRowsPayload" class="form-control" placeholder='[{"Order Number": "INV-501", "Total Revenue": "350.00", "Discounts": "10.00", "Gateway Fee": "10.50"}]'></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitImport()">Run Import & Normalization</button>
+    </div>
+  </div>
+
+  <script>
+    let currentOrgId = 'org_demo_1';
+    let currentView = 'overview';
+
+    const sampleOrgs = [
+      { id: 'org_demo_1', name: 'Alpha Commerce (GBP)', currency: 'GBP' },
+      { id: 'org_demo_2', name: 'Beta Global Store (USD)', currency: 'USD' }
+    ];
+
+    async function init() {
+      // Auto-provision demo tenant if missing
+      try {
+        const res = await fetch('/api/v1/orgs/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Alpha Commerce Ltd', currency: 'GBP' })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          currentOrgId = data.orgId;
+          sampleOrgs[0].id = currentOrgId;
+          updateOrgSelect();
+        }
+      } catch (e) {
+        console.warn('Backend API connection check:', e);
+      }
+      renderView();
+    }
+
+    function updateOrgSelect() {
+      const select = document.getElementById('orgSelect');
+      select.innerHTML = sampleOrgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      select.value = currentOrgId;
+    }
+
+    function switchOrg(newOrgId) {
+      currentOrgId = newOrgId;
+      renderView();
+    }
+
+    function showView(viewName) {
+      currentView = viewName;
+      document.querySelectorAll('nav .nav-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      renderView();
+    }
+
+    async function renderView() {
+      const titleMap = {
+        overview: 'Overview Dashboard',
+        sales: 'Sales & Unified Orders',
+        payouts: 'Payout Reconciliation & Discrepancies',
+        reports: 'Financial Performance & P&L',
+        imports: 'Imports & Onboarding Jobs',
+        integrations: 'Sales Channel Integrations',
+        settings: 'Organization Settings'
+      };
+      document.getElementById('pageTitle').innerText = titleMap[currentView] || 'Dashboard';
+      const container = document.getElementById('contentArea');
+      container.innerHTML = '<div style="color:var(--text-muted);">Loading live financial data...</div>';
+
+      try {
+        if (currentView === 'overview') await renderOverview(container);
+        else if (currentView === 'sales') await renderSales(container);
+        else if (currentView === 'payouts') await renderPayouts(container);
+        else if (currentView === 'reports') await renderReports(container);
+        else if (currentView === 'imports') await renderImports(container);
+        else if (currentView === 'integrations') renderIntegrations(container);
+        else if (currentView === 'settings') renderSettings(container);
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="padding:1.5rem; color:var(--danger);">Error loading data: ${err.message}</div>`;
+      }
+    }
+
+    async function renderOverview(container) {
+      const res = await fetch(`/api/v1/reports/financial?orgId=${currentOrgId}`);
+      const data = await res.json();
+      const m = data.report?.metrics || { grossSales: 0, netSales: 0, totalRefunds: 0, totalFees: 0, netProceeds: 0, totalCogs: 0, grossProfit: 0, grossMarginPercent: 0 };
+
+      container.innerHTML = `
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Gross Sales</div>
+            <div class="kpi-val">£${m.grossSales.toLocaleString()}</div>
+            <div class="kpi-sub">Total subtotal revenue</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Net Sales</div>
+            <div class="kpi-val">£${m.netSales.toLocaleString()}</div>
+            <div class="kpi-sub">After discounts & refunds</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Platform & Processor Fees</div>
+            <div class="kpi-val" style="color:var(--warning);">£${m.totalFees.toLocaleString()}</div>
+            <div class="kpi-sub">Shopify/TikTok/Gateway fees</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Net Proceeds</div>
+            <div class="kpi-val" style="color:var(--success);">£${m.netProceeds.toLocaleString()}</div>
+            <div class="kpi-sub">Net cash into bank</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Gross Profit</div>
+            <div class="kpi-val">£${m.grossProfit.toLocaleString()}</div>
+            <div class="kpi-sub">Margin: ${m.grossMarginPercent}%</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Connected Channel Revenue</div>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Channel Provider</th><th>Channel Name</th><th>Order Volume</th><th>Net Sales</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Shopify</td><td>Official Webstore</td><td>--</td><td>£${m.netSales.toLocaleString()}</td><td><span class="badge badge-success">Active Sync</span></td></tr>
+              <tr><td>TikTok Shop</td><td>UK TikTok Store</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>
+              <tr><td>WooCommerce</td><td>Custom Portal</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function renderSales(container) {
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Unified Canonical Orders</div>
+            <button class="btn btn-secondary" onclick="openImportModal()">+ Import Orders</button>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Order ID</th><th>Provider</th><th>Order #</th><th>Gross</th><th>Discounts</th><th>Net Amount</th><th>Financial Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="color:var(--text-muted); text-align:center;">Use "+ Import Data" above to ingest Shopify, TikTok, or WooCommerce orders.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function renderPayouts(container) {
+      const res = await fetch(`/api/v1/reconciliation/payouts?orgId=${currentOrgId}`);
+      const data = await res.json();
+      const recs = data.reconciliations || [];
+
+      let rowsHtml = recs.map(r => `
+        <tr>
+          <td>${r.externalPayoutId}</td>
+          <td>${r.payoutDate}</td>
+          <td>£${r.recordedNetPayout.toFixed(2)}</td>
+          <td>£${r.expectedNetPayout.toFixed(2)}</td>
+          <td style="color:${r.discrepancy !== 0 ? 'var(--danger)' : 'var(--success)'}; font-weight:600;">£${r.discrepancy.toFixed(2)}</td>
+          <td><span class="badge ${r.status === 'matched' ? 'badge-success' : 'badge-danger'}">${r.status}</span></td>
+        </tr>
+      `).join('');
+
+      if (!rowsHtml) {
+        rowsHtml = `<tr><td colspan="6" style="color:var(--text-muted); text-align:center;">No payout settlements recorded yet for this organization.</td></tr>`;
+      }
+
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Payout Settlement Matching & Discrepancies</div>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Settlement Ref</th><th>Payout Date</th><th>Recorded Payout</th><th>Expected Net</th><th>Discrepancy</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function renderReports(container) {
+      const res = await fetch(`/api/v1/reports/financial?orgId=${currentOrgId}`);
+      const data = await res.json();
+      const m = data.report?.metrics || {};
+
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Comprehensive Multi-Tenant P&L Financial Report</div>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Financial Metric</th><th>Amount (Base Currency)</th><th>% of Gross Sales</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Gross Sales</strong></td><td>£${(m.grossSales || 0).toFixed(2)}</td><td>100.0%</td></tr>
+              <tr><td>Less: Discounts</td><td style="color:var(--warning);">-£${(m.totalDiscounts || 0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td>Less: Refunds</td><td style="color:var(--danger);">-£${(m.totalRefunds || 0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td><strong>Net Sales</strong></td><td><strong>£${(m.netSales || 0).toFixed(2)}</strong></td><td>--</td></tr>
+              <tr><td>Plus: Shipping Income</td><td>+£${(m.shippingIncome || 0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td>Less: Platform & Processor Fees</td><td style="color:var(--danger);">-£${(m.totalFees || 0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td><strong>Net Cash Proceeds</strong></td><td style="color:var(--success);"><strong>£${(m.netProceeds || 0).toFixed(2)}</strong></td><td>--</td></tr>
+              <tr><td>Less: COGS (Product Unit Cost)</td><td>-£${(m.totalCogs || 0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td><strong>Gross Operating Profit</strong></td><td style="color:var(--success); font-weight:700;">£${(m.grossProfit || 0).toFixed(2)}</td><td><strong>Margin: ${m.grossMarginPercent || 0}%</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function renderImports(container) {
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Import & Onboarding Audit Log</div>
+            <button class="btn btn-primary" onclick="openImportModal()">+ Launch Import Wizard</button>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Job ID</th><th>Import Type</th><th>Total Rows</th><th>Successful</th><th>Skipped/Failed</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" style="color:var(--text-muted); text-align:center;">Launch the Import Wizard above to ingest historical channel files or API JSON payloads.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderIntegrations(container) {
+      container.innerHTML = `
+        <div class="kpi-grid">
+          <div class="card" style="padding:1.25rem;">
+            <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">Shopify</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Automated order, fee, and payout normalizer for Shopify stores.</div>
+            <span class="badge badge-success">Fully Functional</span>
+          </div>
+          <div class="card" style="padding:1.25rem;">
+            <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">TikTok Shop</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Normalizes TikTok settlements, commissions, and shipping adjustments.</div>
+            <span class="badge badge-success">Fully Functional</span>
+          </div>
+          <div class="card" style="padding:1.25rem;">
+            <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">WooCommerce</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Parses WooCommerce orders, gateway fees, and coupons.</div>
+            <span class="badge badge-success">Fully Functional</span>
+          </div>
+          <div class="card" style="padding:1.25rem;">
+            <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">Custom CSV Import</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Generic column mapper for historical spreadsheets and exports.</div>
+            <span class="badge badge-success">Fully Functional</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettings(container) {
+      container.innerHTML = `
+        <div class="card" style="max-width:600px; padding:1.5rem;">
+          <div class="card-title" style="margin-bottom:1rem;">Organization Profile</div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label>Tenant ID</label>
+            <input type="text" class="form-control" value="${currentOrgId}" readonly style="opacity:0.7;">
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label>Base Reporting Currency</label>
+            <input type="text" class="form-control" value="GBP (£)" readonly style="opacity:0.7;">
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label>Timezone</label>
+            <input type="text" class="form-control" value="Europe/London" readonly style="opacity:0.7;">
+          </div>
+        </div>
+      `;
+    }
+
+    // Modal Helpers
+    function openNewOrgModal() { document.getElementById('orgModal').classList.add('active'); }
+    function openImportModal() { document.getElementById('importModal').classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function toggleImportFormat(val) {
+      if (val === 'csv') {
+        document.getElementById('jsonInputGroup').style.display = 'none';
+        document.getElementById('csvInputGroup').style.display = 'flex';
+      } else {
+        document.getElementById('jsonInputGroup').style.display = 'flex';
+        document.getElementById('csvInputGroup').style.display = 'none';
+      }
+    }
+
+    async function createOrganization() {
+      const name = document.getElementById('newOrgName').value.trim() || 'New E-Commerce Business';
+      const currency = document.getElementById('newOrgCurr').value;
+      const res = await fetch('/api/v1/orgs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, currency })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        sampleOrgs.push({ id: data.orgId, name: `${name} (${currency})`, currency });
+        currentOrgId = data.orgId;
+        updateOrgSelect();
+        closeModal('orgModal');
+        renderView();
+      }
+    }
+
+    async function submitImport() {
+      const provider = document.getElementById('importProvider').value;
+      let endpoint = '/api/v1/import';
+      let payload = {};
+
+      // Ensure channel is connected
+      const chnRes = await fetch('/api/v1/channels/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Org-ID': currentOrgId },
+        body: JSON.stringify({ provider, channelName: `${provider.toUpperCase()} Channel` })
+      });
+      const chnData = await chnRes.json();
+      const channelId = chnData.channelId;
+
+      if (provider === 'csv') {
+        endpoint = '/api/v1/import/csv';
+        const mapConfig = JSON.parse(document.getElementById('csvMappingConfig').value || '{}');
+        const rows = JSON.parse(document.getElementById('csvRowsPayload').value || '[]');
+        payload = { channelId, csvRows: rows, columnMapping: mapConfig };
+      } else {
+        const rows = JSON.parse(document.getElementById('importJsonPayload').value || '[]');
+        payload = { channelId, provider, rows };
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Org-ID': currentOrgId },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert(`Import Complete! Processed: ${data.result.totalRows} | Successful: ${data.result.successfulRows} | Skipped/Failed: ${data.result.skippedRows + (data.result.failedRows || 0)}`);
+        closeModal('importModal');
+        renderView();
+      } else {
+        alert(`Import Error: ${data.error}`);
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
