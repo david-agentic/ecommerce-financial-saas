@@ -1,0 +1,14 @@
+{
+  "name": "fin-saas-api",
+  "version": "1.0.0",
+  "description": "Financial Intelligence SaaS Worker API",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev":  "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

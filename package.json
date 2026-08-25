@@ -1,0 +1,16 @@
+{
+  "name": "ecommerce-financial-saas",
+  "version": "1.0.0",
+  "description": "Multi-Tenant E-Commerce Financial Intelligence & Automation Platform",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test":       "npm test --prefix workers",
+    "dev":        "npm run dev --prefix workers",
+    "db:migrate": "node workers/scripts/run-migrations.js",
+    "build":      "node -e \"console.log('SaaS Build complete.')\""
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
