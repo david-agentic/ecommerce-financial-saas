@@ -1,6 +1,6 @@
 /**
  * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router & SPA Engine
- * Enforces Web Crypto Token Authentication, Server-Side Membership Authorization, Guided Onboarding & COGS Engine.
+ * Enforces Web Crypto Token Authentication, Server-Side Membership Authorization, Guided Onboarding, Interactive CSV Import & COGS Engine.
  */
 
 import { handleAuthRoutes }       from './auth/routes.js';
@@ -88,7 +88,7 @@ const HTML_APP = `<!DOCTYPE html>
     .badge-danger { background: var(--danger-bg); color: var(--danger); }
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
     .modal-overlay.active { opacity: 1; pointer-events: auto; }
-    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 540px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 600px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; }
     .modal-title { font-weight: 700; font-size: 1.1rem; }
     .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -100,6 +100,8 @@ const HTML_APP = `<!DOCTYPE html>
     .attention-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
     .attention-card.danger { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3); }
     .empty-state { padding: 3rem 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; color: var(--text-muted); }
+    
+    .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-height: 220px; overflow-y: auto; background: #0f172a; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -237,6 +239,7 @@ const HTML_APP = `<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Interactive Data Import Wizard Modal -->
   <div class="modal-overlay" id="importModal">
     <div class="modal" style="max-width: 620px;">
       <div class="modal-header">
@@ -244,27 +247,37 @@ const HTML_APP = `<!DOCTYPE html>
         <button class="btn btn-secondary" onclick="closeModal('importModal')">✕</button>
       </div>
       <div class="form-group">
-        <label>Select Channel / Format</label>
+        <label>Select Channel / Provider</label>
         <select id="importProvider" class="form-control" onchange="toggleImportFormat(this.value)">
           <option value="shopify">Shopify (JSON Payload)</option>
           <option value="tiktok">TikTok Shop (JSON Payload)</option>
           <option value="woocommerce">WooCommerce (JSON Payload)</option>
-          <option value="csv">Custom CSV Import (Header Mapper)</option>
+          <option value="csv">Custom CSV Import (Interactive File & Column Mapper)</option>
         </select>
       </div>
+
       <div class="form-group" id="jsonInputGroup">
         <label>JSON Data Array</label>
         <textarea id="importJsonPayload" class="form-control" placeholder='[{"id": "1001", "name": "#1001", "subtotal_price": 250.00, "processing_fee": 7.50}]'></textarea>
       </div>
-      <div class="form-group" id="csvInputGroup" style="display:none;">
-        <label>CSV Header Mapping (JSON)</label>
-        <textarea id="csvMappingConfig" class="form-control" placeholder='{"external_order_id": "Order Number", "gross_amount": "Total Revenue", "discount_amount": "Discounts", "platform_fee": "Gateway Fee"}'></textarea>
-        <label style="margin-top: 0.5rem;">CSV Row Objects (JSON Array)</label>
-        <textarea id="csvRowsPayload" class="form-control" placeholder='[{"Order Number": "INV-501", "Total Revenue": "350.00", "Discounts": "10.00", "Gateway Fee": "10.50"}]'></textarea>
-        <button class="btn btn-secondary" style="margin-top:0.5rem;" onclick="validateCsvMapping()">Preview & Validate CSV Mapping</button>
+
+      <div class="form-group" id="csvInputGroup" style="display:none; flex-direction:column; gap:0.8rem;">
+        <label>Choose Local CSV File</label>
+        <input type="file" id="csvFileInput" accept=".csv" class="form-control" onchange="handleCsvFileUpload(event)" />
+        
+        <div id="csvHeadersSection" style="display:none;">
+          <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.4rem;">Map CSV Columns to Canonical Order Fields:</div>
+          <div class="mapping-grid" id="csvMappingGrid"></div>
+        </div>
+
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-secondary" onclick="validateCsvMapping()">Run Validation Preview</button>
+        </div>
+
         <div id="csvValidationBox" style="display:none; padding:0.75rem; background:#0f172a; border:1px solid var(--border); border-radius:6px; font-size:0.8rem;"></div>
       </div>
-      <button class="btn btn-primary" onclick="submitImport()">Run Import & Normalization</button>
+
+      <button class="btn btn-primary" id="startImportBtn" onclick="submitImport()">Run Import & Normalization</button>
     </div>
   </div>
 
@@ -275,6 +288,8 @@ const HTML_APP = `<!DOCTYPE html>
     let currentOrgId = null;
     let currentView = 'overview';
     let isSignupMode = false;
+    let parsedCsvRows = [];
+    let detectedCsvHeaders = [];
 
     async function init() {
       if (!authToken) {
@@ -336,6 +351,7 @@ const HTML_APP = `<!DOCTYPE html>
           authToken = data.token;
           localStorage.setItem('fin_saas_token', authToken);
           await init();
+          if (isSignupMode) openOnboardingWizard();
         } else {
           alert('Authentication Error: ' + data.error);
         }
@@ -507,7 +523,10 @@ const HTML_APP = `<!DOCTYPE html>
         body: JSON.stringify({ sku, unitCost: parseFloat(val) })
       });
       const data = await res.json();
-      if (data.ok) { alert('Updated unit cost for SKU ' + sku); renderCogs(document.getElementById('contentArea')); }
+      if (data.ok) {
+        alert('Updated unit cost for SKU ' + sku);
+        await renderCogs(document.getElementById('contentArea'));
+      }
     }
 
     async function renderSales(container) {
@@ -642,14 +661,89 @@ const HTML_APP = `<!DOCTYPE html>
 
     function openImportModal() { document.getElementById('importModal').classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    
     function toggleImportFormat(val) {
-      if (val === 'csv') { document.getElementById('jsonInputGroup').style.display = 'none'; document.getElementById('csvInputGroup').style.display = 'flex'; }
-      else { document.getElementById('jsonInputGroup').style.display = 'flex'; document.getElementById('csvInputGroup').style.display = 'none'; }
+      if (val === 'csv') {
+        document.getElementById('jsonInputGroup').style.display = 'none';
+        document.getElementById('csvInputGroup').style.display = 'flex';
+      } else {
+        document.getElementById('jsonInputGroup').style.display = 'flex';
+        document.getElementById('csvInputGroup').style.display = 'none';
+      }
+    }
+
+    function handleCsvFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        parseCsvText(text);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCsvText(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+      if (lines.length === 0) return;
+
+      detectedCsvHeaders = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+      parsedCsvRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+        const rowObj = {};
+        detectedCsvHeaders.forEach((h, idx) => {
+          rowObj[h] = cols[idx] || '';
+        });
+        parsedCsvRows.push(rowObj);
+      }
+
+      renderCsvMappingUI();
+    }
+
+    function renderCsvMappingUI() {
+      const grid = document.getElementById('csvMappingGrid');
+      document.getElementById('csvHeadersSection').style.display = 'block';
+
+      const canonicalFields = [
+        { key: 'external_order_id', label: 'Order ID / Number (Required)' },
+        { key: 'gross_amount', label: 'Gross Sale Total (Required)' },
+        { key: 'discount_amount', label: 'Discount Amount' },
+        { key: 'shipping_amount', label: 'Shipping Amount' },
+        { key: 'tax_amount', label: 'Tax Amount' },
+        { key: 'platform_fee', label: 'Platform / Gateway Fee' },
+        { key: 'sku', label: 'Product SKU' },
+        { key: 'product_title', label: 'Product Title' }
+      ];
+
+      grid.innerHTML = canonicalFields.map(f => {
+        const optionsHtml = '<option value="">-- Ignore Field --</option>' +
+          detectedCsvHeaders.map(h => {
+            const autoMatch = (f.key === 'external_order_id' && (h.toLowerCase().includes('order') || h.toLowerCase().includes('invoice') || h.toLowerCase().includes('id'))) ||
+                              (f.key === 'gross_amount' && (h.toLowerCase().includes('total') || h.toLowerCase().includes('gross') || h.toLowerCase().includes('amount') || h.toLowerCase().includes('price')));
+            return '<option value="' + h + '" ' + (autoMatch ? 'selected' : '') + '>' + h + '</option>';
+          }).join('');
+
+        return '<div><label style="font-size:0.75rem; color:var(--text-muted);">' + f.label + '</label>' +
+               '<select id="map_' + f.key + '" class="form-control" style="font-size:0.8rem; padding:0.4rem;">' + optionsHtml + '</select></div>';
+      }).join('');
+    }
+
+    function buildMappingConfig() {
+      const mapping = {};
+      const fields = ['external_order_id', 'gross_amount', 'discount_amount', 'shipping_amount', 'tax_amount', 'platform_fee', 'sku', 'product_title'];
+      fields.forEach(f => {
+        const el = document.getElementById('map_' + f);
+        if (el && el.value) mapping[f] = el.value;
+      });
+      return mapping;
     }
 
     async function validateCsvMapping() {
-      const mapConfig = JSON.parse(document.getElementById('csvMappingConfig').value || '{}');
-      const rows = JSON.parse(document.getElementById('csvRowsPayload').value || '[]');
+      const mapConfig = buildMappingConfig();
+      const rows = parsedCsvRows.length > 0 ? parsedCsvRows : JSON.parse(document.getElementById('csvRowsPayload')?.value || '[]');
+      
       const res = await authFetch('/api/v1/import/csv/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -676,8 +770,8 @@ const HTML_APP = `<!DOCTYPE html>
 
       if (provider === 'csv') {
         endpoint = '/api/v1/import/csv';
-        const mapConfig = JSON.parse(document.getElementById('csvMappingConfig').value || '{}');
-        const rows = JSON.parse(document.getElementById('csvRowsPayload').value || '[]');
+        const mapConfig = buildMappingConfig();
+        const rows = parsedCsvRows.length > 0 ? parsedCsvRows : JSON.parse(document.getElementById('csvRowsPayload')?.value || '[]');
         payload = { channelId, csvRows: rows, columnMapping: mapConfig };
       } else {
         const rows = JSON.parse(document.getElementById('importJsonPayload').value || '[]');
@@ -689,7 +783,7 @@ const HTML_APP = `<!DOCTYPE html>
       if (data.ok) {
         alert('Import Complete! Total: ' + data.result.totalRows + ' | Successful: ' + data.result.successfulRows + ' | Skipped/Failed: ' + (data.result.skippedRows + (data.result.failedRows || 0)));
         closeModal('importModal');
-        renderView();
+        await renderView();
       } else { alert('Import Error: ' + data.error); }
     }
 

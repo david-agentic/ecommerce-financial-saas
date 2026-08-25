@@ -59,6 +59,24 @@ export async function processCsvImport(db, { orgId, channelId, csvRows, columnMa
         grossAmount, discountAmount, shippingAmount, taxAmount, orderedAt
       ).run();
 
+      // Upsert Line Item for Product Discovery & COGS
+      const skuVal   = String(getMappedValue(rawRow, columnMapping, 'sku') || '').trim();
+      const titleVal = String(getMappedValue(rawRow, columnMapping, 'product_title') || skuVal || 'CSV Product').trim();
+      const qtyVal   = parseInt(getMappedValue(rawRow, columnMapping, 'quantity')) || 1;
+      const unitPriceVal = parseAmount(getMappedValue(rawRow, columnMapping, 'unit_price')) || (grossAmount / (qtyVal || 1));
+
+      if (skuVal) {
+        const lineItemId = `itm_csv_${extOrderId}_${skuVal}`;
+        await db.prepare(`
+          INSERT INTO canonical_order_items (
+            id, org_id, order_id, sku, title, qty, unit_price, unit_cost
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 0.0)
+          ON CONFLICT(org_id, order_id, sku) DO UPDATE SET
+            qty = excluded.qty,
+            unit_price = excluded.unit_price
+        `).bind(lineItemId, orgId, orderId, skuVal, titleVal, qtyVal, unitPriceVal).run();
+      }
+
       // Upsert Financial Sale Event
       const eventId = `evt_csv_sale_${extOrderId}`;
       await db.prepare(`
