@@ -109,35 +109,45 @@ const HTML_APP = `<!DOCTYPE html>
   <!-- Auth Screen -->
   <div class="auth-overlay" id="authScreen">
     <div class="auth-card">
-      <div class="brand-icon" style="margin: 0 auto 0.5rem auto; width:36px; height:36px; font-size:1.1rem;">F</div>
-      <div class="auth-title" id="authTitle">Sign In to FinSaaS</div>
+      <div class="brand-icon" style="margin: 0 auto 0.25rem auto; width:42px; height:42px; font-size:1.25rem; font-weight:800;">B</div>
+      <div style="text-align:center; font-weight:800; font-size:1.2rem; color:#fff; letter-spacing:0.5px;">B-COMPASS</div>
+      <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">Know your business. Know your direction.</div>
+
+      <!-- Auth Tabs -->
+      <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:0.5rem;">
+        <button id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--accent); color:var(--accent); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
+        <button id="tabSignup" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; cursor:pointer;" onclick="setAuthMode(true)">Create Account</button>
+      </div>
+
+      <div id="authErrorMsg" style="display:none; padding:0.6rem 0.8rem; background:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:6px; color:#ef4444; font-size:0.8rem; text-align:center; font-weight:600;"></div>
+
       <div class="form-group" id="nameGroup" style="display:none;">
         <label>Full Name</label>
-        <input type="text" id="authName" class="form-control" placeholder="John Doe">
+        <input type="text" id="authName" class="form-control" placeholder="Jane Merchant">
       </div>
       <div class="form-group" id="orgNameGroup" style="display:none;">
-        <label>Initial Organization Name</label>
-        <input type="text" id="authOrgName" class="form-control" placeholder="My Commerce Store">
+        <label>Organization / Business Name</label>
+        <input type="text" id="authOrgName" class="form-control" placeholder="Jane Retail Global">
       </div>
       <div class="form-group">
         <label>Email Address</label>
-        <input type="email" id="authEmail" class="form-control" placeholder="john@example.com">
+        <input type="email" id="authEmail" class="form-control" placeholder="jane@merchant.com">
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="authPassword" class="form-control" placeholder="••••••••">
+        <input type="password" id="authPassword" class="form-control" placeholder="Minimum 8 characters">
       </div>
-      <button class="btn btn-primary" style="justify-content:center;" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
-      <div style="text-align:center; font-size:0.8rem; color:var(--text-muted); cursor:pointer;" onclick="toggleAuthMode()" id="authToggleText">
-        Need an account? Sign up & Create Organization
+      <button class="btn btn-primary" style="justify-content:center; padding:0.75rem;" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
+      <div style="text-align:center; font-size:0.8rem; color:var(--text-muted); cursor:pointer; text-decoration:underline;" onclick="toggleAuthMode()" id="authToggleText">
+        Need a new account? Create Organization
       </div>
     </div>
   </div>
 
   <aside>
     <div class="brand">
-      <div class="brand-icon">F</div>
-      <span>FinSaaS Intelligence</span>
+      <div class="brand-icon">B</div>
+      <span>B-COMPASS</span>
     </div>
     <div class="org-selector">
       <label>Authorized Tenant</label>
@@ -320,24 +330,73 @@ const HTML_APP = `<!DOCTYPE html>
       }
     }
 
-    function toggleAuthMode() {
-      isSignupMode = !isSignupMode;
-      document.getElementById('authTitle').innerText = isSignupMode ? 'Create Your Account & Organization' : 'Sign In to FinSaaS';
-      document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Sign Up & Onboard' : 'Sign In';
-      document.getElementById('authToggleText').innerText = isSignupMode ? 'Already have an account? Sign in' : 'Need an account? Sign up & Create Organization';
+    function setAuthMode(signup) {
+      isSignupMode = signup;
+      const errBox = document.getElementById('authErrorMsg');
+      if (errBox) errBox.style.display = 'none';
+      
+      const tabSignin = document.getElementById('tabSignin');
+      const tabSignup = document.getElementById('tabSignup');
+      if (tabSignin && tabSignup) {
+        tabSignin.style.borderBottomColor = signup ? 'transparent' : 'var(--accent)';
+        tabSignin.style.color = signup ? 'var(--text-muted)' : 'var(--accent)';
+        tabSignin.style.fontWeight = signup ? '600' : '700';
+
+        tabSignup.style.borderBottomColor = signup ? 'var(--accent)' : 'transparent';
+        tabSignup.style.color = signup ? 'var(--accent)' : 'var(--text-muted)';
+        tabSignup.style.fontWeight = signup ? '700' : '600';
+      }
+
+      document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Create Account & Start' : 'Sign In';
+      document.getElementById('authToggleText').innerText = isSignupMode ? 'Already have an account? Sign in' : 'Need a new account? Create Organization';
       document.getElementById('nameGroup').style.display = isSignupMode ? 'flex' : 'none';
       document.getElementById('orgNameGroup').style.display = isSignupMode ? 'flex' : 'none';
     }
 
+    function toggleAuthMode() {
+      setAuthMode(!isSignupMode);
+    }
+
+    function showAuthError(msg) {
+      const box = document.getElementById('authErrorMsg');
+      if (box) {
+        box.innerText = msg;
+        box.style.display = 'block';
+      } else {
+        alert(msg);
+      }
+    }
+
     async function handleAuthSubmit() {
+      const errBox = document.getElementById('authErrorMsg');
+      if (errBox) errBox.style.display = 'none';
+
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
-      const endpoint = isSignupMode ? '/api/v1/auth/signup' : '/api/v1/auth/login';
 
+      if (!email) {
+        showAuthError('Please enter your email address.');
+        return;
+      }
+      if (!password) {
+        showAuthError('Please enter your password.');
+        return;
+      }
+      if (isSignupMode && password.length < 8) {
+        showAuthError('Password must be at least 8 characters long.');
+        return;
+      }
+
+      const btn = document.getElementById('authSubmitBtn');
+      const origText = btn.innerText;
+      btn.innerText = 'Processing...';
+      btn.disabled = true;
+
+      const endpoint = isSignupMode ? '/api/v1/auth/signup' : '/api/v1/auth/login';
       const payload = { email, password };
       if (isSignupMode) {
-        payload.name = document.getElementById('authName').value.trim() || 'Merchant Owner';
-        payload.orgName = document.getElementById('authOrgName').value.trim() || 'My Commerce Business';
+        payload.name = document.getElementById('authName').value.trim() || 'Jane Merchant';
+        payload.orgName = document.getElementById('authOrgName').value.trim() || 'Jane Retail Global';
       }
 
       try {
@@ -353,10 +412,13 @@ const HTML_APP = `<!DOCTYPE html>
           await init();
           if (isSignupMode) openOnboardingWizard();
         } else {
-          alert('Authentication Error: ' + data.error);
+          showAuthError(data.error || 'Authentication failed');
         }
       } catch (err) {
-        alert('Network Error: ' + err.message);
+        showAuthError('Network Error: Unable to reach SaaS API backend');
+      } finally {
+        btn.innerText = origText;
+        btn.disabled = false;
       }
     }
 
