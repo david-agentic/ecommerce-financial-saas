@@ -113,6 +113,13 @@ const HTML_APP = `<!DOCTYPE html>
       <div style="text-align:center; font-weight:800; font-size:1.2rem; color:#fff; letter-spacing:0.5px;">B-COMPASS</div>
       <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">Know your business. Know your direction.</div>
 
+      <!-- Quick Demo Access Button -->
+      <button type="button" id="quickDemoBtn" class="btn" style="background:linear-gradient(135deg, #38bdf8, #818cf8); color:#0f172a; font-weight:700; width:100%; justify-content:center; padding:0.75rem; border:none; border-radius:6px; cursor:pointer;" onclick="handleQuickDemoLogin()">
+        ⚡ Quick Demo Login (One-Click Start)
+      </button>
+
+      <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin:0.25rem 0;">— OR USE YOUR OWN ACCOUNT —</div>
+
       <!-- Auth Tabs -->
       <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:0.5rem;">
         <button type="button" id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--accent); color:var(--accent); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
@@ -358,6 +365,41 @@ const HTML_APP = `<!DOCTYPE html>
 
     function toggleAuthMode() {
       setAuthMode(!isSignupMode);
+    }
+
+    async function handleQuickDemoLogin() {
+      const errBox = document.getElementById('authErrorMsg');
+      if (errBox) errBox.style.display = 'none';
+
+      const demoId = Date.now().toString().slice(-5);
+      const email = 'demo_' + demoId + '@bcompass.com';
+      const password = 'DemoPassword123!';
+      const name = 'Demo Merchant';
+      const orgName = 'B-COMPASS Demo Store #' + demoId;
+
+      const btn = document.getElementById('quickDemoBtn');
+      if (btn) { btn.innerText = '⚡ Logging in Demo Account...'; btn.disabled = true; }
+
+      try {
+        const res = await fetch('/api/v1/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name, orgName })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          authToken = data.token;
+          localStorage.setItem('fin_saas_token', authToken);
+          await init();
+          openOnboardingWizard();
+        } else {
+          showAuthError(data.error || 'Demo login failed');
+        }
+      } catch (err) {
+        showAuthError('Network Error: Unable to complete demo login');
+      } finally {
+        if (btn) { btn.innerText = '⚡ Quick Demo Login (One-Click Start)'; btn.disabled = false; }
+      }
     }
 
     function showAuthError(msg) {
@@ -889,7 +931,13 @@ export default {
       // 1. Serve Web SaaS Dashboard SPA
       if (path === '/' || path === '/app' || path === '/index.html') {
         return new Response(HTML_APP, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            ...corsHeaders
+          }
         });
       }
 
