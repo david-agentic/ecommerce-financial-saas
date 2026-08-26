@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding  = "DB"
 database_name = "ecommerce-financial-saas-db"
-database_id   = "REPLACE_WITH_SAAS_D1_DATABASE_ID"
+database_id   = "e4750f0a-9969-4aa1-a3af-24f677c2c093"
 
 # ── Environment variables ──────────────────────────────────
 [vars]
