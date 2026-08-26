@@ -115,29 +115,32 @@ const HTML_APP = `<!DOCTYPE html>
 
       <!-- Auth Tabs -->
       <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:0.5rem;">
-        <button id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--accent); color:var(--accent); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
-        <button id="tabSignup" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; cursor:pointer;" onclick="setAuthMode(true)">Create Account</button>
+        <button type="button" id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--accent); color:var(--accent); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
+        <button type="button" id="tabSignup" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; cursor:pointer;" onclick="setAuthMode(true)">Create Account</button>
       </div>
 
       <div id="authErrorMsg" style="display:none; padding:0.6rem 0.8rem; background:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:6px; color:#ef4444; font-size:0.8rem; text-align:center; font-weight:600;"></div>
 
-      <div class="form-group" id="nameGroup" style="display:none;">
-        <label>Full Name</label>
-        <input type="text" id="authName" class="form-control" placeholder="Jane Merchant">
-      </div>
-      <div class="form-group" id="orgNameGroup" style="display:none;">
-        <label>Organization / Business Name</label>
-        <input type="text" id="authOrgName" class="form-control" placeholder="Jane Retail Global">
-      </div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="authEmail" class="form-control" placeholder="jane@merchant.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="authPassword" class="form-control" placeholder="Minimum 8 characters">
-      </div>
-      <button class="btn btn-primary" style="justify-content:center; padding:0.75rem;" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
+      <form id="authForm" onsubmit="event.preventDefault(); handleAuthSubmit();" style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="form-group" id="nameGroup" style="display:none;">
+          <label>Full Name</label>
+          <input type="text" id="authName" class="form-control" placeholder="Jane Merchant" autocomplete="name">
+        </div>
+        <div class="form-group" id="orgNameGroup" style="display:none;">
+          <label>Organization / Business Name</label>
+          <input type="text" id="authOrgName" class="form-control" placeholder="Jane Retail Global" autocomplete="organization">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="authEmail" class="form-control" placeholder="jane@merchant.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="authPassword" class="form-control" placeholder="Minimum 8 characters" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="justify-content:center; padding:0.75rem; margin-top:0.25rem;" id="authSubmitBtn">Sign In</button>
+      </form>
+
       <div style="text-align:center; font-size:0.8rem; color:var(--text-muted); cursor:pointer; text-decoration:underline;" onclick="toggleAuthMode()" id="authToggleText">
         Need a new account? Create Organization
       </div>
@@ -849,7 +852,20 @@ const HTML_APP = `<!DOCTYPE html>
       } else { alert('Import Error: ' + data.error); }
     }
 
-    window.onload = init;
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('B-COMPASS Global Error:', message, source, lineno, colno, error);
+      const errBox = document.getElementById('authErrorMsg');
+      if (errBox) {
+        errBox.innerText = 'App Error: ' + message;
+        errBox.style.display = 'block';
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>`;
