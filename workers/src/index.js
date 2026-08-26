@@ -1,6 +1,6 @@
 /**
  * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router & SPA Engine
- * Enforces Web Crypto Token Authentication, Server-Side Membership Authorization, Guided Onboarding, Interactive CSV Import & COGS Engine.
+ * B-COMPASS — Know Your Business. Know Your Direction.
  */
 
 import { handleAuthRoutes }       from './auth/routes.js';
@@ -18,90 +18,123 @@ const HTML_APP = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financial Intelligence SaaS — Multi-Tenant Commerce Analytics</title>
+  <title>B-COMPASS — Know Your Business. Know Your Direction.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
-      --bg-card: #1e293b;
-      --bg-card-hover: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --accent: #38bdf8;
-      --accent-hover: #0284c7;
-      --success: #22c55e;
-      --success-bg: rgba(34, 197, 94, 0.1);
-      --warning: #f59e0b;
-      --warning-bg: rgba(245, 158, 11, 0.1);
-      --danger: #ef4444;
-      --danger-bg: rgba(239, 68, 68, 0.1);
-      --border: #334155;
-      --radius: 8px;
+      --bg-main: #f8fafc;
+      --bg-sidebar: #0f2042;
+      --bg-sidebar-active: rgba(255,255,255,0.08);
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --border-dark: #1e293b;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-sidebar: #94a3b8;
+      --navy: #0f2042;
+      --navy-light: #16284e;
+      --green: #1e7e45;
+      --green-hover: #166534;
+      --green-bg: #dcfce7;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      --radius: 6px;
+      --shadow-sm: 0 1px 3px rgba(15,23,42,0.06);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-    .auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-    .auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 1.25rem; }
-    .auth-title { font-size: 1.25rem; font-weight: 700; text-align: center; }
-    aside { width: 260px; background: #0b1329; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; }
-    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem; padding: 0 0.5rem; }
-    .brand-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #38bdf8, #818cf8); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0f172a; font-size: 0.9rem; }
-    .org-selector { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; margin-bottom: 1.5rem; }
-    .org-selector label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 0.25rem; }
-    .org-selector select { width: 100%; background: transparent; border: none; color: var(--text-main); font-weight: 600; font-size: 0.875rem; outline: none; cursor: pointer; }
-    nav { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
-    .nav-btn { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; color: var(--text-muted); font-size: 0.875rem; font-weight: 500; border-radius: var(--radius); cursor: pointer; border: none; background: transparent; text-align: left; width: 100%; transition: all 0.15s ease; }
-    .nav-btn:hover { background: var(--bg-secondary); color: var(--text-main); }
-    .nav-btn.active { background: rgba(56, 189, 248, 0.12); color: var(--accent); font-weight: 600; }
-    .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
-    .sidebar-footer { padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-dim); }
-    main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-primary); }
-    header { padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: #0b1329; }
-    .page-title { font-size: 1.25rem; font-weight: 700; }
-    .header-actions { display: flex; gap: 0.75rem; align-items: center; }
-    .btn { padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 0.4rem; }
-    .btn-primary { background: var(--accent); color: #0f172a; }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-secondary { background: var(--bg-secondary); border-color: var(--border); color: var(--text-main); }
-    .btn-secondary:hover { background: var(--bg-card-hover); }
-    .content-area { padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.75rem; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
-    .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.15rem; display: flex; flex-direction: column; gap: 0.4rem; }
-    .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
-    .kpi-val { font-size: 1.5rem; font-weight: 700; color: #fff; }
-    .kpi-sub { font-size: 0.75rem; color: var(--text-dim); }
-    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .card-title { font-size: 1rem; font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem; }
-    th { background: #141f36; color: var(--text-muted); font-weight: 600; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); }
-    td { padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; font-size: 0.875rem; }
+    
+    /* Auth Overlay */
+    .auth-overlay { position: fixed; inset: 0; background: #0f2042; display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.5rem; }
+    .auth-card { background: #ffffff; border-radius: 12px; width: 100%; max-width: 440px; padding: 2.25rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 1.25rem; }
+    .auth-brand { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.35rem; }
+    .logo-container { display: flex; align-items: center; gap: 0.5rem; }
+    .logo-b { font-family: 'Playfair Display', Georgia, serif; font-size: 2.2rem; font-weight: 800; color: var(--navy); line-height: 1; }
+    .logo-text { font-size: 1.35rem; font-weight: 800; letter-spacing: 1px; color: var(--navy); text-transform: uppercase; }
+    .tagline { font-size: 0.725rem; font-weight: 700; color: var(--green); letter-spacing: 0.8px; text-transform: uppercase; }
+    
+    /* Sidebar */
+    aside { width: 250px; background: var(--bg-sidebar); border-right: 1px solid var(--navy-light); display: flex; flex-direction: column; color: #fff; }
+    .sidebar-brand { padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.2rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-brand .name { font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+    .sidebar-brand .sub { font-size: 0.65rem; color: #4ade80; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .org-selector { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .org-selector label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-sidebar); display: block; margin-bottom: 0.35rem; }
+    .org-selector select { width: 100%; background: #16284e; border: 1px solid #2a3854; color: #fff; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; font-weight: 600; outline: none; cursor: pointer; }
+    
+    nav { padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; color: var(--text-sidebar); font-size: 0.85rem; font-weight: 500; border-radius: 6px; cursor: pointer; border: none; background: transparent; text-align: left; width: 100%; transition: all 0.15s ease; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active { background: var(--green); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    
+    .sidebar-user { padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); background: #0a1730; display: flex; flex-direction: column; gap: 0.5rem; }
+    .user-name { font-weight: 600; font-size: 0.8rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    /* Main Area */
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    header { height: 60px; background: #ffffff; border-bottom: 1px solid var(--border-color); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .header-title { font-size: 1.15rem; font-weight: 700; color: var(--navy); }
+    .header-actions { display: flex; gap: 0.75rem; }
+    
+    .content-area { flex: 1; padding: 2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    
+    /* Cards & Grids */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .kpi-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 0.35rem; }
+    .kpi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+    .kpi-val { font-size: 1.5rem; font-weight: 800; color: var(--navy); }
+    .kpi-sub { font-size: 0.75rem; color: var(--text-muted); }
+    
+    .card { background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
+    .card-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); }
+    
+    /* Buttons & Controls */
+    .btn { padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; outline: none; }
+    .btn-green { background: var(--green); color: #ffffff; }
+    .btn-green:hover { background: var(--green-hover); }
+    .btn-navy { background: var(--navy); color: #ffffff; }
+    .btn-navy:hover { background: var(--navy-light); }
+    .btn-outline { background: #ffffff; border-color: var(--border-color); color: var(--text-main); }
+    .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+    
+    /* Forms & Inputs */
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-main); }
+    .form-control { background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 0.55rem 0.75rem; color: var(--text-main); font-size: 0.85rem; outline: none; transition: border-color 0.15s ease; width: 100%; }
+    .form-control:focus { border-color: var(--green); }
+    
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.825rem; }
+    th { background: #f8fafc; color: var(--text-muted); font-weight: 600; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    .badge { display: inline-block; padding: 0.2rem 0.55rem; font-size: 0.725rem; font-weight: 600; border-radius: 12px; text-transform: capitalize; }
-    .badge-success { background: var(--success-bg); color: var(--success); }
-    .badge-warning { background: var(--warning-bg); color: var(--warning); }
-    .badge-danger { background: var(--danger-bg); color: var(--danger); }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    .modal-overlay.active { opacity: 1; pointer-events: auto; }
-    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 600px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; }
-    .modal-title { font-weight: 700; font-size: 1.1rem; }
-    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-    .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
-    .form-control { background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; color: var(--text-main); font-size: 0.875rem; outline: none; }
-    .form-control:focus { border-color: var(--accent); }
-    textarea.form-control { min-height: 100px; font-family: monospace; font-size: 0.8rem; }
+    tr:hover td { background: #f8fafc; }
     
-    .attention-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
-    .attention-card.danger { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3); }
-    .empty-state { padding: 3rem 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; color: var(--text-muted); }
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; font-size: 0.7rem; font-weight: 700; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge-success { background: var(--green-bg); color: #15803d; }
+    .badge-warning { background: var(--warning-bg); color: var(--warning-text); }
+    .badge-danger { background: var(--danger-bg); color: var(--danger-text); }
     
-    .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-height: 220px; overflow-y: auto; background: #0f172a; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border); }
+    /* Modals */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,32,66,0.6); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #ffffff; border-radius: 8px; width: 100%; max-width: 580px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; }
+    .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
+    .modal-title { font-weight: 700; font-size: 1rem; color: var(--navy); }
+    .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; max-height: 80vh; overflow-y: auto; }
+    
+    .attention-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .attention-card.danger { background: #fef2f2; border-color: #fecaca; }
+    
+    .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); max-height: 220px; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -109,33 +142,35 @@ const HTML_APP = `<!DOCTYPE html>
   <!-- Auth Screen -->
   <div class="auth-overlay" id="authScreen">
     <div class="auth-card">
-      <div class="brand-icon" style="margin: 0 auto 0.25rem auto; width:42px; height:42px; font-size:1.25rem; font-weight:800;">B</div>
-      <div style="text-align:center; font-weight:800; font-size:1.2rem; color:#fff; letter-spacing:0.5px;">B-COMPASS</div>
-      <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">Know your business. Know your direction.</div>
+      <div class="auth-brand">
+        <div class="logo-container">
+          <span class="logo-b">B</span>
+          <span class="logo-text">B-COMPASS</span>
+        </div>
+        <div class="tagline">KNOW YOUR BUSINESS. KNOW YOUR DIRECTION.</div>
+      </div>
 
-      <!-- Quick Demo Access Button -->
-      <button type="button" id="quickDemoBtn" class="btn" style="background:linear-gradient(135deg, #38bdf8, #818cf8); color:#0f172a; font-weight:700; width:100%; justify-content:center; padding:0.75rem; border:none; border-radius:6px; cursor:pointer;" onclick="handleQuickDemoLogin()">
+      <button type="button" id="quickDemoBtn" class="btn btn-green" style="padding: 0.75rem; font-weight: 700; font-size: 0.85rem;" onclick="handleQuickDemoLogin()">
         ⚡ Quick Demo Login (One-Click Start)
       </button>
 
-      <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin:0.25rem 0;">— OR USE YOUR OWN ACCOUNT —</div>
+      <div style="text-align:center; font-size:0.7rem; font-weight:700; color:var(--text-muted); letter-spacing:0.5px;">— OR SIGN IN WITH YOUR ACCOUNT —</div>
 
-      <!-- Auth Tabs -->
-      <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:0.5rem;">
-        <button type="button" id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--accent); color:var(--accent); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
+      <div style="display:flex; border-bottom:1px solid var(--border-color);">
+        <button type="button" id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--green); color:var(--green); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
         <button type="button" id="tabSignup" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; cursor:pointer;" onclick="setAuthMode(true)">Create Account</button>
       </div>
 
-      <div id="authErrorMsg" style="display:none; padding:0.6rem 0.8rem; background:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:6px; color:#ef4444; font-size:0.8rem; text-align:center; font-weight:600;"></div>
+      <div id="authErrorMsg" style="display:none; padding:0.6rem 0.8rem; background:var(--danger-bg); border:1px solid #fca5a5; border-radius:6px; color:var(--danger-text); font-size:0.8rem; text-align:center; font-weight:600;"></div>
 
-      <form id="authForm" onsubmit="event.preventDefault(); handleAuthSubmit();" style="display:flex; flex-direction:column; gap:1rem;">
+      <form id="authForm" onsubmit="event.preventDefault(); handleAuthSubmit();" style="display:flex; flex-direction:column; gap:0.85rem;">
         <div class="form-group" id="nameGroup" style="display:none;">
           <label>Full Name</label>
           <input type="text" id="authName" class="form-control" placeholder="Jane Merchant" autocomplete="name">
         </div>
         <div class="form-group" id="orgNameGroup" style="display:none;">
           <label>Organization / Business Name</label>
-          <input type="text" id="authOrgName" class="form-control" placeholder="Jane Retail Global" autocomplete="organization">
+          <input type="text" id="authOrgName" class="form-control" placeholder="Jane Retail Ltd" autocomplete="organization">
         </div>
         <div class="form-group">
           <label>Email Address</label>
@@ -145,70 +180,71 @@ const HTML_APP = `<!DOCTYPE html>
           <label>Password</label>
           <input type="password" id="authPassword" class="form-control" placeholder="Minimum 8 characters" required autocomplete="current-password">
         </div>
-        <button type="submit" class="btn btn-primary" style="justify-content:center; padding:0.75rem; margin-top:0.25rem;" id="authSubmitBtn">Sign In</button>
+        <button type="submit" class="btn btn-navy" style="padding:0.75rem; margin-top:0.25rem;" id="authSubmitBtn">Sign In</button>
       </form>
-
-      <div style="text-align:center; font-size:0.8rem; color:var(--text-muted); cursor:pointer; text-decoration:underline;" onclick="toggleAuthMode()" id="authToggleText">
-        Need a new account? Create Organization
-      </div>
     </div>
   </div>
 
+  <!-- Sidebar Navigation -->
   <aside>
-    <div class="brand">
-      <div class="brand-icon">B</div>
-      <span>B-COMPASS</span>
+    <div class="sidebar-brand">
+      <div style="display:flex; align-items:center; gap:0.4rem;">
+        <span style="font-family:'Playfair Display', Georgia, serif; font-size:1.4rem; font-weight:800; color:#fff;">B</span>
+        <span class="name">B-COMPASS</span>
+      </div>
+      <div class="sub">KNOW YOUR BUSINESS. KNOW YOUR DIRECTION.</div>
     </div>
     <div class="org-selector">
       <label>Authorized Tenant</label>
       <select id="orgSelect" onchange="switchOrg(this.value)"></select>
     </div>
     <nav>
-      <button class="nav-btn active" onclick="showView('overview', event)">
+      <button type="button" class="nav-item active" onclick="showView('overview', event)">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        Overview
+        Overview Dashboard
       </button>
-      <button class="nav-btn" onclick="showView('sales', event)">
+      <button type="button" class="nav-item" onclick="showView('sales', event)">
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-        Sales & Orders
+        Sales & Unified Orders
       </button>
-      <button class="nav-btn" onclick="showView('cogs', event)">
+      <button type="button" class="nav-item" onclick="showView('cogs', event)">
         <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
         Product Costs (COGS)
       </button>
-      <button class="nav-btn" onclick="showView('payouts', event)">
+      <button type="button" class="nav-item" onclick="showView('payouts', event)">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
         Payout Reconciliation
       </button>
-      <button class="nav-btn" onclick="showView('reports', event)">
+      <button type="button" class="nav-item" onclick="showView('reports', event)">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        Reports (P&L)
+        Reports (P&L Ledger)
       </button>
-      <button class="nav-btn" onclick="showView('imports', event)">
+      <button type="button" class="nav-item" onclick="showView('imports', event)">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        Imports & Onboarding
+        Imports & Audit Jobs
       </button>
-      <button class="nav-btn" onclick="showView('integrations', event)">
+      <button type="button" class="nav-item" onclick="showView('integrations', event)">
         <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         Sales Channels
       </button>
-      <button class="nav-btn" onclick="showView('settings', event)">
+      <button type="button" class="nav-item" onclick="showView('settings', event)">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         Organization Settings
       </button>
     </nav>
-    <div class="sidebar-footer">
-      <div id="userInfo">Not Authenticated</div>
-      <button class="btn btn-secondary" style="width:100%; margin-top:0.5rem; justify-content:center;" onclick="logout()">Sign Out</button>
+    <div class="sidebar-user">
+      <div class="user-name" id="userInfo">Not Authenticated</div>
+      <button type="button" class="btn btn-outline" style="width:100%; justify-content:center; padding:0.4rem; font-size:0.75rem;" onclick="logout()">Sign Out</button>
     </div>
   </aside>
 
+  <!-- Main View Area -->
   <main>
     <header>
-      <div class="page-title" id="pageTitle">Overview Dashboard</div>
+      <div class="header-title" id="pageTitle">Overview Dashboard</div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="openOnboardingWizard()">Guided Setup</button>
-        <button class="btn btn-primary" onclick="openImportModal()">+ Import Data</button>
+        <button type="button" class="btn btn-outline" onclick="openOnboardingWizard()">Guided Setup</button>
+        <button type="button" class="btn btn-green" onclick="openImportModal()">+ Import Data</button>
       </div>
     </header>
     <div class="content-area" id="contentArea"></div>
@@ -216,45 +252,49 @@ const HTML_APP = `<!DOCTYPE html>
 
   <!-- Guided Onboarding Modal -->
   <div class="modal-overlay" id="onboardingWizardModal">
-    <div class="modal" style="max-width: 580px;">
+    <div class="modal">
       <div class="modal-header">
         <div class="modal-title" id="wizardStepTitle">Step 1: Business Setup</div>
-        <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal')">✕</button>
+        <button type="button" class="btn btn-outline" style="padding:0.25rem 0.5rem;" onclick="closeModal('onboardingWizardModal')">✕</button>
       </div>
-      <div id="wizardStep1">
-        <div class="form-group" style="margin-bottom:1rem;"><label>Business Name</label><input type="text" id="obOrgName" class="form-control" placeholder="e.g. Acme Commerce Ltd"></div>
-        <div class="form-group" style="margin-bottom:1rem;"><label>Base Reporting Currency</label><select id="obCurrency" class="form-control"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></div>
-        <div class="form-group" style="margin-bottom:1rem;"><label>Primary Region</label><select id="obRegion" class="form-control"><option value="UK">United Kingdom</option><option value="US">United States</option><option value="EU">European Union</option></select></div>
-        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveOnboardingStep1()">Next: Primary Objective →</button>
-      </div>
-      <div id="wizardStep2" style="display:none;">
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label>What is your primary goal for this platform?</label>
-          <select id="obObjective" class="form-control">
-            <option value="finance_intelligence">Understand My E-Commerce Finances (Sales, Margins, Payouts)</option>
-            <option value="prepare_books">Prepare My Books (Reconciliation & Clean Ledger)</option>
-            <option value="automate_accounting">Automate Accounting (Prepared for QuickBooks / Platforms)</option>
-          </select>
+      <div class="modal-body">
+        <div id="wizardStep1" style="display:flex; flex-direction:column; gap:1rem;">
+          <div class="form-group"><label>Business Name</label><input type="text" id="obOrgName" class="form-control" placeholder="e.g. Acme Commerce Ltd"></div>
+          <div class="form-group"><label>Base Reporting Currency</label><select id="obCurrency" class="form-control"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></div>
+          <div class="form-group"><label>Primary Region</label><select id="obRegion" class="form-control"><option value="UK">United Kingdom</option><option value="US">United States</option><option value="EU">European Union</option></select></div>
+          <button type="button" class="btn btn-green" style="padding:0.75rem;" onclick="saveOnboardingStep1()">Next: Primary Objective →</button>
         </div>
-        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveOnboardingStep2()">Next: Connect Channels →</button>
-      </div>
-      <div id="wizardStep3" style="display:none;">
-        <div style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Select your active sales channels to start ingesting orders & settlement payouts:</div>
-        <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
-          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>Shopify</strong> <span class="badge badge-success">Ready</span></div>
-            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
+
+        <div id="wizardStep2" style="display:none; flex-direction:column; gap:1rem;">
+          <div class="form-group">
+            <label>What is your primary goal for B-COMPASS?</label>
+            <select id="obObjective" class="form-control">
+              <option value="finance_intelligence">Understand My E-Commerce Finances (Sales, Margins, Payouts)</option>
+              <option value="prepare_books">Prepare My Books (Reconciliation & Clean Ledger)</option>
+              <option value="automate_accounting">Automate Accounting (Prepared for QuickBooks / Platforms)</option>
+            </select>
           </div>
-          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>TikTok Shop</strong> <span class="badge badge-success">Ready</span></div>
-            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
-          </div>
-          <div style="background:#0f172a; border:1px solid var(--border); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>Custom CSV Import</strong> <span class="badge badge-success">Header Mapper</span></div>
-            <button class="btn btn-secondary" onclick="closeModal('onboardingWizardModal'); openImportModal();">Upload CSV</button>
-          </div>
+          <button type="button" class="btn btn-green" style="padding:0.75rem;" onclick="saveOnboardingStep2()">Next: Connect Channels →</button>
         </div>
-        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="closeModal('onboardingWizardModal'); renderView();">Complete Setup & View Dashboard</button>
+
+        <div id="wizardStep3" style="display:none; flex-direction:column; gap:1rem;">
+          <div style="color:var(--text-muted); font-size:0.85rem;">Select your active sales channels to start ingesting orders & settlement payouts:</div>
+          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <div style="background:#f8fafc; border:1px solid var(--border-color); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+              <div><strong>Shopify</strong> <span class="badge badge-success" style="margin-left:0.5rem;">Ready</span></div>
+              <button type="button" class="btn btn-outline" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
+            </div>
+            <div style="background:#f8fafc; border:1px solid var(--border-color); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+              <div><strong>TikTok Shop</strong> <span class="badge badge-success" style="margin-left:0.5rem;">Ready</span></div>
+              <button type="button" class="btn btn-outline" onclick="closeModal('onboardingWizardModal'); openImportModal();">Import Data</button>
+            </div>
+            <div style="background:#f8fafc; border:1px solid var(--border-color); padding:0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+              <div><strong>Custom CSV Upload</strong> <span class="badge badge-success" style="margin-left:0.5rem;">Header Mapper</span></div>
+              <button type="button" class="btn btn-outline" onclick="closeModal('onboardingWizardModal'); openImportModal();">Upload CSV</button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-green" style="padding:0.75rem; margin-top:0.5rem;" onclick="closeModal('onboardingWizardModal'); renderView();">Complete Setup & View Dashboard</button>
+        </div>
       </div>
     </div>
   </div>
@@ -264,40 +304,42 @@ const HTML_APP = `<!DOCTYPE html>
     <div class="modal" style="max-width: 620px;">
       <div class="modal-header">
         <div class="modal-title">Import & Normalize Channel Data</div>
-        <button class="btn btn-secondary" onclick="closeModal('importModal')">✕</button>
+        <button type="button" class="btn btn-outline" style="padding:0.25rem 0.5rem;" onclick="closeModal('importModal')">✕</button>
       </div>
-      <div class="form-group">
-        <label>Select Channel / Provider</label>
-        <select id="importProvider" class="form-control" onchange="toggleImportFormat(this.value)">
-          <option value="shopify">Shopify (JSON Payload)</option>
-          <option value="tiktok">TikTok Shop (JSON Payload)</option>
-          <option value="woocommerce">WooCommerce (JSON Payload)</option>
-          <option value="csv">Custom CSV Import (Interactive File & Column Mapper)</option>
-        </select>
-      </div>
-
-      <div class="form-group" id="jsonInputGroup">
-        <label>JSON Data Array</label>
-        <textarea id="importJsonPayload" class="form-control" placeholder='[{"id": "1001", "name": "#1001", "subtotal_price": 250.00, "processing_fee": 7.50}]'></textarea>
-      </div>
-
-      <div class="form-group" id="csvInputGroup" style="display:none; flex-direction:column; gap:0.8rem;">
-        <label>Choose Local CSV File</label>
-        <input type="file" id="csvFileInput" accept=".csv" class="form-control" onchange="handleCsvFileUpload(event)" />
-        
-        <div id="csvHeadersSection" style="display:none;">
-          <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.4rem;">Map CSV Columns to Canonical Order Fields:</div>
-          <div class="mapping-grid" id="csvMappingGrid"></div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Select Channel / Provider</label>
+          <select id="importProvider" class="form-control" onchange="toggleImportFormat(this.value)">
+            <option value="shopify">Shopify (JSON Payload)</option>
+            <option value="tiktok">TikTok Shop (JSON Payload)</option>
+            <option value="woocommerce">WooCommerce (JSON Payload)</option>
+            <option value="csv" selected>Custom CSV Import (Interactive File & Column Mapper)</option>
+          </select>
         </div>
 
-        <div style="display:flex; gap:0.5rem;">
-          <button class="btn btn-secondary" onclick="validateCsvMapping()">Run Validation Preview</button>
+        <div class="form-group" id="jsonInputGroup" style="display:none;">
+          <label>JSON Data Array</label>
+          <textarea id="importJsonPayload" class="form-control" style="min-height:100px; font-family:monospace; font-size:0.8rem;" placeholder='[{"id": "1001", "name": "#1001", "subtotal_price": 250.00, "processing_fee": 7.50}]'></textarea>
         </div>
 
-        <div id="csvValidationBox" style="display:none; padding:0.75rem; background:#0f172a; border:1px solid var(--border); border-radius:6px; font-size:0.8rem;"></div>
-      </div>
+        <div class="form-group" id="csvInputGroup" style="display:flex; flex-direction:column; gap:0.8rem;">
+          <label>Choose Local CSV File</label>
+          <input type="file" id="csvFileInput" accept=".csv" class="form-control" onchange="handleCsvFileUpload(event)" />
+          
+          <div id="csvHeadersSection" style="display:none;">
+            <div style="font-size:0.8rem; font-weight:700; color:var(--navy); margin-bottom:0.4rem;">Map CSV Columns to Canonical Order Fields:</div>
+            <div class="mapping-grid" id="csvMappingGrid"></div>
+          </div>
 
-      <button class="btn btn-primary" id="startImportBtn" onclick="submitImport()">Run Import & Normalization</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn btn-outline" onclick="validateCsvMapping()">Run Validation Preview</button>
+          </div>
+
+          <div id="csvValidationBox" style="display:none; padding:0.75rem; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.8rem;"></div>
+        </div>
+
+        <button type="button" class="btn btn-green" style="padding:0.75rem; margin-top:0.5rem;" id="startImportBtn" onclick="submitImport()">Run Import & Normalization</button>
+      </div>
     </div>
   </div>
 
@@ -348,17 +390,16 @@ const HTML_APP = `<!DOCTYPE html>
       const tabSignin = document.getElementById('tabSignin');
       const tabSignup = document.getElementById('tabSignup');
       if (tabSignin && tabSignup) {
-        tabSignin.style.borderBottomColor = signup ? 'transparent' : 'var(--accent)';
-        tabSignin.style.color = signup ? 'var(--text-muted)' : 'var(--accent)';
+        tabSignin.style.borderBottomColor = signup ? 'transparent' : 'var(--green)';
+        tabSignin.style.color = signup ? 'var(--text-muted)' : 'var(--green)';
         tabSignin.style.fontWeight = signup ? '600' : '700';
 
-        tabSignup.style.borderBottomColor = signup ? 'var(--accent)' : 'transparent';
-        tabSignup.style.color = signup ? 'var(--accent)' : 'var(--text-muted)';
+        tabSignup.style.borderBottomColor = signup ? 'var(--green)' : 'transparent';
+        tabSignup.style.color = signup ? 'var(--green)' : 'var(--text-muted)';
         tabSignup.style.fontWeight = signup ? '700' : '600';
       }
 
       document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Create Account & Start' : 'Sign In';
-      document.getElementById('authToggleText').innerText = isSignupMode ? 'Already have an account? Sign in' : 'Need a new account? Create Organization';
       document.getElementById('nameGroup').style.display = isSignupMode ? 'flex' : 'none';
       document.getElementById('orgNameGroup').style.display = isSignupMode ? 'flex' : 'none';
     }
@@ -419,18 +460,9 @@ const HTML_APP = `<!DOCTYPE html>
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
 
-      if (!email) {
-        showAuthError('Please enter your email address.');
-        return;
-      }
-      if (!password) {
-        showAuthError('Please enter your password.');
-        return;
-      }
-      if (isSignupMode && password.length < 8) {
-        showAuthError('Password must be at least 8 characters long.');
-        return;
-      }
+      if (!email) { showAuthError('Please enter your email address.'); return; }
+      if (!password) { showAuthError('Please enter your password.'); return; }
+      if (isSignupMode && password.length < 8) { showAuthError('Password must be at least 8 characters long.'); return; }
 
       const btn = document.getElementById('authSubmitBtn');
       const origText = btn.innerText;
@@ -441,7 +473,7 @@ const HTML_APP = `<!DOCTYPE html>
       const payload = { email, password };
       if (isSignupMode) {
         payload.name = document.getElementById('authName').value.trim() || 'Jane Merchant';
-        payload.orgName = document.getElementById('authOrgName').value.trim() || 'Jane Retail Global';
+        payload.orgName = document.getElementById('authOrgName').value.trim() || 'Jane Retail Ltd';
       }
 
       try {
@@ -493,7 +525,7 @@ const HTML_APP = `<!DOCTYPE html>
 
     function showView(viewName, evt) {
       currentView = viewName;
-      document.querySelectorAll('nav .nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('nav .nav-item').forEach(btn => btn.classList.remove('active'));
       if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
       renderView();
     }
@@ -512,10 +544,10 @@ const HTML_APP = `<!DOCTYPE html>
 
     async function renderView() {
       if (!currentOrgId) return;
-      const titleMap = { overview: 'Overview Dashboard', sales: 'Sales & Unified Orders', cogs: 'Product Costs (COGS)', payouts: 'Payout Reconciliation & Discrepancies', reports: 'Financial Performance & P&L', imports: 'Imports & Onboarding Jobs', integrations: 'Sales Channels', settings: 'Organization Settings' };
+      const titleMap = { overview: 'Overview Dashboard', sales: 'Sales & Unified Orders', cogs: 'Product Costs (COGS)', payouts: 'Payout Reconciliation & Discrepancies', reports: 'Financial Performance & P&L Ledger', imports: 'Imports & Audit Jobs', integrations: 'Sales Channels', settings: 'Organization Settings' };
       document.getElementById('pageTitle').innerText = titleMap[currentView] || 'Dashboard';
       const container = document.getElementById('contentArea');
-      container.innerHTML = '<div style="color:var(--text-muted);">Loading server-verified financial data...</div>';
+      container.innerHTML = '<div style="color:var(--text-muted); padding:1rem;">Loading verified financial ledger data...</div>';
 
       try {
         if (currentView === 'overview') await renderOverview(container);
@@ -527,7 +559,7 @@ const HTML_APP = `<!DOCTYPE html>
         else if (currentView === 'integrations') await renderIntegrations(container);
         else if (currentView === 'settings') renderSettings(container);
       } catch (err) {
-        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger);">Authorization / Server Error: ' + err.message + '</div>';
+        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger-text);">Authorization / Server Error: ' + err.message + '</div>';
       }
     }
 
@@ -541,54 +573,50 @@ const HTML_APP = `<!DOCTYPE html>
 
       let attentionHtml = '';
       if (attData.attentionItems && attData.attentionItems.length > 0) {
-        attentionHtml = attData.attentionItems.map(item => \`
-          <div class="attention-card \${item.severity}">
-            <div>
-              <strong style="color:#fff;">\${item.title}</strong>
-              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">\${item.message}</div>
-            </div>
-            <button class="btn btn-secondary" onclick="showView('\${item.actionView}')">Resolve</button>
-          </div>
-        \`).join('');
+        attentionHtml = attData.attentionItems.map(item =>
+          '<div class="attention-card ' + item.severity + '">' +
+            '<div>' +
+              '<strong style="color:var(--navy); font-size:0.9rem;">' + item.title + '</strong>' +
+              '<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">' + item.message + '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-outline" onclick="showView(\'' + item.actionView + '\')">Resolve</button>' +
+          '</div>'
+        ).join('');
       }
 
       if (attData.isEmptyState) {
-        container.innerHTML = \`
-          <div class="card empty-state">
-            <div style="font-size:1.25rem; font-weight:700; color:#fff;">Welcome to FinSaaS Intelligence</div>
-            <div>No sales data or orders imported for this organization yet.</div>
-            <div style="display:flex; gap:1rem; margin-top:1rem;">
-              <button class="btn btn-primary" onclick="openImportModal()">+ Import Channel Data / CSV</button>
-              <button class="btn btn-secondary" onclick="openOnboardingWizard()">Guided Setup</button>
-            </div>
-          </div>
-        \`;
+        container.innerHTML =
+          '<div class="card" style="padding:3rem 1.5rem; text-align:center; display:flex; flex-direction:column; align-items:center; gap:1rem;">' +
+            '<div style="font-size:1.25rem; font-weight:800; color:var(--navy);">Welcome to B-COMPASS</div>' +
+            '<div style="color:var(--text-muted); max-width:460px;">No sales data or orders imported for this organization yet. Ingest channel data or CSV files to calculate real Net Proceeds and Operating Profit.</div>' +
+            '<div style="display:flex; gap:1rem; margin-top:0.5rem;">' +
+              '<button type="button" class="btn btn-green" onclick="openImportModal()">+ Import Channel Data / CSV</button>' +
+              '<button type="button" class="btn btn-outline" onclick="openOnboardingWizard()">Guided Setup</button>' +
+            '</div>' +
+          '</div>';
         return;
       }
 
-      container.innerHTML = \`
-        \${attentionHtml ? '<div style="display:flex; flex-direction:column; gap:0.75rem;">' + attentionHtml + '</div>' : ''}
-
-        <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-label">Gross Sales</div><div class="kpi-val">£\${m.grossSales.toLocaleString()}</div><div class="kpi-sub">Total subtotal revenue</div></div>
-          <div class="kpi-card"><div class="kpi-label">Net Sales</div><div class="kpi-val">£\${m.netSales.toLocaleString()}</div><div class="kpi-sub">After discounts & refunds</div></div>
-          <div class="kpi-card"><div class="kpi-label">Platform & Fees</div><div class="kpi-val" style="color:var(--warning);">£\${m.totalFees.toLocaleString()}</div><div class="kpi-sub">Shopify/TikTok/Gateway fees</div></div>
-          <div class="kpi-card"><div class="kpi-label">Net Proceeds</div><div class="kpi-val" style="color:var(--success);">£\${m.netProceeds.toLocaleString()}</div><div class="kpi-sub">Net cash into bank</div></div>
-          <div class="kpi-card"><div class="kpi-label">Gross Profit</div><div class="kpi-val">£\${m.grossProfit.toLocaleString()}</div><div class="kpi-sub">Margin: \${m.grossMarginPercent}%</div></div>
-        </div>
-
-        <div class="card">
-          <div class="card-header"><div class="card-title">Connected Channel Performance</div></div>
-          <table>
-            <thead><tr><th>Channel Provider</th><th>Channel Name</th><th>Order Count</th><th>Net Revenue</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td>Shopify</td><td>Official Webstore</td><td>--</td><td>£\${m.netSales.toLocaleString()}</td><td><span class="badge badge-success">Active Normalizer</span></td></tr>
-              <tr><td>TikTok Shop</td><td>UK TikTok Store</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>
-              <tr><td>WooCommerce</td><td>Custom Portal</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      \`;
+      container.innerHTML =
+        (attentionHtml ? '<div style="display:flex; flex-direction:column; gap:0.75rem;">' + attentionHtml + '</div>' : '') +
+        '<div class="kpi-grid">' +
+          '<div class="kpi-card"><div class="kpi-label">Gross Sales</div><div class="kpi-val">£' + m.grossSales.toLocaleString() + '</div><div class="kpi-sub">Total subtotal revenue</div></div>' +
+          '<div class="kpi-card"><div class="kpi-label">Net Sales</div><div class="kpi-val">£' + m.netSales.toLocaleString() + '</div><div class="kpi-sub">After discounts & refunds</div></div>' +
+          '<div class="kpi-card"><div class="kpi-label">Platform & Fees</div><div class="kpi-val" style="color:var(--warning-text);">£' + m.totalFees.toLocaleString() + '</div><div class="kpi-sub">Shopify/TikTok/Gateway fees</div></div>' +
+          '<div class="kpi-card"><div class="kpi-label">Net Proceeds</div><div class="kpi-val" style="color:var(--green);">£' + m.netProceeds.toLocaleString() + '</div><div class="kpi-sub">Net cash into bank</div></div>' +
+          '<div class="kpi-card"><div class="kpi-label">Gross Operating Profit</div><div class="kpi-val">£' + m.grossProfit.toLocaleString() + '</div><div class="kpi-sub">Margin: ' + m.grossMarginPercent + '%</div></div>' +
+        '</div>' +
+        '<div class="card">' +
+          '<div class="card-header"><div class="card-title">Connected Channel Performance</div></div>' +
+          '<table>' +
+            '<thead><tr><th>Channel Provider</th><th>Channel Name</th><th>Order Count</th><th>Net Revenue</th><th>Status</th></tr></thead>' +
+            '<tbody>' +
+              '<tr><td>Shopify</td><td>Official Webstore</td><td>--</td><td>£' + m.netSales.toLocaleString() + '</td><td><span class="badge badge-success">Active Normalizer</span></td></tr>' +
+              '<tr><td>TikTok Shop</td><td>UK TikTok Store</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>' +
+              '<tr><td>WooCommerce</td><td>Custom Portal</td><td>--</td><td>£0.00</td><td><span class="badge badge-warning">Import Ready</span></td></tr>' +
+            '</tbody>' +
+          '</table>' +
+        '</div>';
     }
 
     async function renderCogs(container) {
@@ -596,30 +624,31 @@ const HTML_APP = `<!DOCTYPE html>
       const data = await res.json();
       const products = data.products || [];
 
-      let rows = products.map(p => \`
-        <tr>
-          <td><strong>\${p.sku}</strong></td>
-          <td>\${p.title}</td>
-          <td>
-            <input type="number" step="0.01" value="\${p.unit_cost}" id="cost_\${p.sku}" class="form-control" style="width:110px; display:inline-block;" />
-            <button class="btn btn-secondary" onclick="updateCost('\${p.sku}')">Save</button>
-          </td>
-          <td><span class="badge \${p.unit_cost > 0 ? 'badge-success' : 'badge-warning'}">\${p.unit_cost > 0 ? 'Costed' : 'Missing Cost'}</span></td>
-        </tr>
-      \`).join('');
+      let rows = products.map(p =>
+        '<tr>' +
+          '<td><strong>' + p.sku + '</strong></td>' +
+          '<td>' + p.title + '</td>' +
+          '<td>' +
+            '<div style="display:flex; gap:0.4rem; align-items:center;">' +
+              '<input type="number" step="0.01" value="' + p.unit_cost + '" id="cost_' + p.sku + '" class="form-control" style="width:110px;" />' +
+              '<button type="button" class="btn btn-outline" onclick="updateCost(\'' + p.sku + '\')">Save</button>' +
+            '</div>' +
+          '</td>' +
+          '<td><span class="badge ' + (p.unit_cost > 0 ? 'badge-success' : 'badge-warning') + '">' + (p.unit_cost > 0 ? 'Costed' : 'Missing Cost') + '</span></td>' +
+        '</tr>'
+      ).join('');
 
-      if (!rows) rows = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No products discovered yet. Import orders to populate the product catalog.</td></tr>';
+      if (!rows) rows = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No products discovered yet. Import orders to populate the product catalog.</td></tr>';
 
-      container.innerHTML = \`
-        \${data.isProfitCalculationIncomplete ? '<div class="attention-card warning"><div><strong>Profit Calculations Incomplete</strong><div style="font-size:0.8rem; color:var(--text-muted);">' + data.uncostedProductsCount + ' products lack unit costs. Update costs below to calculate operating profit.</div></div></div>' : ''}
-        <div class="card">
-          <div class="card-header"><div class="card-title">Product Catalog & Unit Cost Management</div></div>
-          <table>
-            <thead><tr><th>SKU</th><th>Title</th><th>Unit Cost (£)</th><th>Status</th></tr></thead>
-            <tbody>\${rows}</tbody>
-          </table>
-        </div>
-      \`;
+      container.innerHTML =
+        (data.isProfitCalculationIncomplete ? '<div class="attention-card danger"><div><strong style="color:var(--navy);">Profit Calculations Incomplete</strong><div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">' + data.uncostedProductsCount + ' products lack unit costs. Update costs below to calculate operating profit.</div></div></div>' : '') +
+        '<div class="card">' +
+          '<div class="card-header"><div class="card-title">Product Catalog & Unit Cost Management</div></div>' +
+          '<table>' +
+            '<thead><tr><th>SKU</th><th>Title</th><th>Unit Cost (£)</th><th>Status</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody>' +
+          '</table>' +
+        '</div>';
     }
 
     async function updateCost(sku) {
@@ -637,32 +666,31 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     async function renderSales(container) {
-      container.innerHTML = \`
-        <div class="card">
-          <div class="card-header"><div class="card-title">Unified Canonical Orders</div><button class="btn btn-secondary" onclick="openImportModal()">+ Import Orders</button></div>
-          <table>
-            <thead><tr><th>Order ID</th><th>Provider</th><th>Order #</th><th>Gross</th><th>Discounts</th><th>Net Amount</th><th>Status</th></tr></thead>
-            <tbody><tr><td colspan="7" style="color:var(--text-muted); text-align:center;">Use "+ Import Data" above to ingest Shopify, TikTok, or WooCommerce orders.</td></tr></tbody>
-          </table>
-        </div>
-      \`;
+      container.innerHTML =
+        '<div class="card">' +
+          '<div class="card-header"><div class="card-title">Unified Canonical Orders</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Import Orders</button></div>' +
+          '<table>' +
+            '<thead><tr><th>Order ID</th><th>Provider</th><th>Order #</th><th>Gross</th><th>Discounts</th><th>Net Amount</th><th>Status</th></tr></thead>' +
+            '<tbody><tr><td colspan="7" style="color:var(--text-muted); text-align:center; padding:2rem;">Use "+ Import Data" above to ingest Shopify, TikTok, or WooCommerce orders.</td></tr></tbody>' +
+          '</table>' +
+        '</div>';
     }
 
     async function renderPayouts(container) {
       const res = await authFetch('/api/v1/reconciliation/payouts?orgId=' + currentOrgId);
       const data = await res.json();
       const recs = data.reconciliations || [];
-      let rowsHtml = recs.map(r => \`
-        <tr>
-          <td>\${r.externalPayoutId}</td>
-          <td>\${r.payoutDate}</td>
-          <td>£\${r.recordedNetPayout.toFixed(2)}</td>
-          <td>£\${r.expectedNetPayout.toFixed(2)}</td>
-          <td style="color:\${r.discrepancy !== 0 ? 'var(--danger)' : 'var(--success)'}; font-weight:600;">£\${r.discrepancy.toFixed(2)}</td>
-          <td><span class="badge \${r.status === 'matched' ? 'badge-success' : 'badge-danger'}">\${r.status}</span></td>
-        </tr>
-      \`).join('');
-      if (!rowsHtml) rowsHtml = '<tr><td colspan="6" style="color:var(--text-muted); text-align:center;">No payout settlements recorded yet for this organization.</td></tr>';
+      let rowsHtml = recs.map(r =>
+        '<tr>' +
+          '<td>' + r.externalPayoutId + '</td>' +
+          '<td>' + r.payoutDate + '</td>' +
+          '<td>£' + r.recordedNetPayout.toFixed(2) + '</td>' +
+          '<td>£' + r.expectedNetPayout.toFixed(2) + '</td>' +
+          '<td style="color:' + (r.discrepancy !== 0 ? 'var(--danger-text)' : 'var(--green)') + '; font-weight:700;">£' + r.discrepancy.toFixed(2) + '</td>' +
+          '<td><span class="badge ' + (r.status === 'matched' ? 'badge-success' : 'badge-danger') + '">' + r.status + '</span></td>' +
+        '</tr>'
+      ).join('');
+      if (!rowsHtml) rowsHtml = '<tr><td colspan="6" style="color:var(--text-muted); text-align:center; padding:2rem;">No payout settlements recorded yet for this organization.</td></tr>';
       container.innerHTML = '<div class="card"><div class="card-header"><div class="card-title">Payout Settlement Matching & Discrepancies</div></div><table><thead><tr><th>Settlement Ref</th><th>Payout Date</th><th>Recorded Payout</th><th>Expected Net</th><th>Discrepancy</th><th>Status</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
     }
 
@@ -670,37 +698,35 @@ const HTML_APP = `<!DOCTYPE html>
       const res = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
       const data = await res.json();
       const m = data.report?.metrics || {};
-      container.innerHTML = \`
-        <div class="card">
-          <div class="card-header"><div class="card-title">Comprehensive Multi-Tenant P&L Financial Report</div></div>
-          <table>
-            <thead><tr><th>Financial Metric</th><th>Amount (Base Currency)</th><th>% of Gross Sales</th></tr></thead>
-            <tbody>
-              <tr><td><strong>Gross Sales</strong></td><td>£\${(m.grossSales || 0).toFixed(2)}</td><td>100.0%</td></tr>
-              <tr><td>Less: Discounts</td><td style="color:var(--warning);">-£\${(m.totalDiscounts || 0).toFixed(2)}</td><td>--</td></tr>
-              <tr><td>Less: Refunds</td><td style="color:var(--danger);">-£\${(m.totalRefunds || 0).toFixed(2)}</td><td>--</td></tr>
-              <tr><td><strong>Net Sales</strong></td><td><strong>£\${(m.netSales || 0).toFixed(2)}</strong></td><td>--</td></tr>
-              <tr><td>Plus: Shipping Income</td><td>+£\${(m.shippingIncome || 0).toFixed(2)}</td><td>--</td></tr>
-              <tr><td>Less: Platform & Processor Fees</td><td style="color:var(--danger);">-£\${(m.totalFees || 0).toFixed(2)}</td><td>--</td></tr>
-              <tr><td><strong>Net Cash Proceeds</strong></td><td style="color:var(--success);"><strong>£\${(m.netProceeds || 0).toFixed(2)}</strong></td><td>--</td></tr>
-              <tr><td>Less: COGS (Product Unit Cost)</td><td>-£\${(m.totalCogs || 0).toFixed(2)}</td><td>--</td></tr>
-              <tr><td><strong>Gross Operating Profit</strong></td><td style="color:var(--success); font-weight:700;">£\${(m.grossProfit || 0).toFixed(2)}</td><td><strong>Margin: \${m.grossMarginPercent || 0}%</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-      \`;
+      container.innerHTML =
+        '<div class="card">' +
+          '<div class="card-header"><div class="card-title">Financial Performance & P&L Ledger</div></div>' +
+          '<table>' +
+            '<thead><tr><th>Financial Metric</th><th>Amount (Base Currency)</th><th>% of Gross Sales</th></tr></thead>' +
+            '<tbody>' +
+              '<tr><td><strong>Gross Sales</strong></td><td>£' + (m.grossSales || 0).toFixed(2) + '</td><td>100.0%</td></tr>' +
+              '<tr><td>Less: Discounts</td><td style="color:var(--warning-text);">-£' + (m.totalDiscounts || 0).toFixed(2) + '</td><td>--</td></tr>' +
+              '<tr><td>Less: Refunds</td><td style="color:var(--danger-text);">-£' + (m.totalRefunds || 0).toFixed(2) + '</td><td>--</td></tr>' +
+              '<tr><td><strong>Net Sales</strong></td><td><strong>£' + (m.netSales || 0).toFixed(2) + '</strong></td><td>--</td></tr>' +
+              '<tr><td>Plus: Shipping Income</td><td>+£' + (m.shippingIncome || 0).toFixed(2) + '</td><td>--</td></tr>' +
+              '<tr><td>Less: Platform & Processor Fees</td><td style="color:var(--danger-text);">-£' + (m.totalFees || 0).toFixed(2) + '</td><td>--</td></tr>' +
+              '<tr><td><strong>Net Cash Proceeds</strong></td><td style="color:var(--green);"><strong>£' + (m.netProceeds || 0).toFixed(2) + '</strong></td><td>--</td></tr>' +
+              '<tr><td>Less: COGS (Product Unit Cost)</td><td>-£' + (m.totalCogs || 0).toFixed(2) + '</td><td>--</td></tr>' +
+              '<tr><td><strong>Gross Operating Profit</strong></td><td style="color:var(--green); font-weight:800; font-size:0.95rem;">£' + (m.grossProfit || 0).toFixed(2) + '</td><td><strong>Margin: ' + (m.grossMarginPercent || 0) + '%</strong></td></tr>' +
+            '</tbody>' +
+          '</table>' +
+        '</div>';
     }
 
     async function renderImports(container) {
-      container.innerHTML = \`
-        <div class="card">
-          <div class="card-header"><div class="card-title">Import & Onboarding Audit Log</div><button class="btn btn-primary" onclick="openImportModal()">+ Launch Import Wizard</button></div>
-          <table>
-            <thead><tr><th>Job ID</th><th>Import Type</th><th>Total Rows</th><th>Successful</th><th>Skipped/Failed</th><th>Status</th></tr></thead>
-            <tbody><tr><td colspan="6" style="color:var(--text-muted); text-align:center;">Launch the Import Wizard above to ingest historical channel files or API JSON payloads.</td></tr></tbody>
-          </table>
-        </div>
-      \`;
+      container.innerHTML =
+        '<div class="card">' +
+          '<div class="card-header"><div class="card-title">Import & Audit Logs</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Launch Import Wizard</button></div>' +
+          '<table>' +
+            '<thead><tr><th>Job ID</th><th>Import Type</th><th>Total Rows</th><th>Successful</th><th>Skipped/Failed</th><th>Status</th></tr></thead>' +
+            '<tbody><tr><td colspan="6" style="color:var(--text-muted); text-align:center; padding:2rem;">Launch the Import Wizard above to ingest historical channel files or API JSON payloads.</td></tr></tbody>' +
+          '</table>' +
+        '</div>';
     }
 
     async function renderIntegrations(container) {
@@ -708,32 +734,33 @@ const HTML_APP = `<!DOCTYPE html>
       const data = await res.json();
       const channels = data.channels || [];
 
-      let cardsHtml = channels.map(c => \`
-        <div class="card" style="padding:1.25rem;">
-          <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.3rem;">\${c.title}</div>
-          <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">\${c.description}</div>
-          <span class="badge \${c.status === 'Connected' ? 'badge-success' : 'badge-warning'}">\${c.status}</span>
-        </div>
-      \`).join('');
+      let cardsHtml = channels.map(c =>
+        '<div class="card" style="padding:1.25rem;">' +
+          '<div style="font-weight:700; font-size:1rem; color:var(--navy); margin-bottom:0.3rem;">' + c.title + '</div>' +
+          '<div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:1rem;">' + c.description + '</div>' +
+          '<span class="badge ' + (c.status === 'Connected' ? 'badge-success' : 'badge-warning') + '">' + c.status + '</span>' +
+        '</div>'
+      ).join('');
 
       container.innerHTML = '<div class="kpi-grid">' + cardsHtml + '</div>';
     }
 
     function renderSettings(container) {
       const activeOrg = userOrgs.find(o => o.id === currentOrgId) || {};
-      container.innerHTML = \`
-        <div class="card" style="max-width:600px; padding:1.5rem;">
-          <div class="card-title" style="margin-bottom:1rem;">Organization Profile & Permissions</div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Tenant ID</label><input type="text" class="form-control" value="\${currentOrgId}" readonly style="opacity:0.7;"></div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Organization Name</label><input type="text" class="form-control" value="\${activeOrg.name || ''}" readonly style="opacity:0.7;"></div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Your Server-Verified Role</label><input type="text" class="form-control" value="\${(activeOrg.role || 'viewer').toUpperCase()}" readonly style="opacity:0.7; font-weight:700; color:var(--accent);"></div>
-          <div class="form-group" style="margin-bottom:1rem;"><label>Base Currency</label><input type="text" class="form-control" value="\${activeOrg.base_currency || 'GBP'}" readonly style="opacity:0.7;"></div>
-        </div>
-      \`;
+      container.innerHTML =
+        '<div class="card" style="max-width:540px; padding:1.5rem;">' +
+          '<div class="card-title" style="margin-bottom:1.25rem;">Organization Profile & Role Permissions</div>' +
+          '<div style="display:flex; flex-direction:column; gap:1rem;">' +
+            '<div class="form-group"><label>Tenant ID</label><input type="text" class="form-control" value="' + currentOrgId + '" readonly style="opacity:0.75; font-family:monospace;"></div>' +
+            '<div class="form-group"><label>Organization Name</label><input type="text" class="form-control" value="' + (activeOrg.name || '') + '" readonly style="opacity:0.75;"></div>' +
+            '<div class="form-group"><label>Your Verified Role</label><input type="text" class="form-control" value="' + ((activeOrg.role || 'viewer').toUpperCase()) + '" readonly style="opacity:0.75; font-weight:700; color:var(--green);"></div>' +
+            '<div class="form-group"><label>Base Reporting Currency</label><input type="text" class="form-control" value="' + (activeOrg.base_currency || 'GBP') + '" readonly style="opacity:0.75;"></div>' +
+          '</div>' +
+        '</div>';
     }
 
     function openOnboardingWizard() {
-      document.getElementById('wizardStep1').style.display = 'block';
+      document.getElementById('wizardStep1').style.display = 'flex';
       document.getElementById('wizardStep2').style.display = 'none';
       document.getElementById('wizardStep3').style.display = 'none';
       document.getElementById('wizardStepTitle').innerText = 'Step 1: Business Setup';
@@ -750,7 +777,7 @@ const HTML_APP = `<!DOCTYPE html>
         body: JSON.stringify({ name, currency, region })
       });
       document.getElementById('wizardStep1').style.display = 'none';
-      document.getElementById('wizardStep2').style.display = 'block';
+      document.getElementById('wizardStep2').style.display = 'flex';
       document.getElementById('wizardStepTitle').innerText = 'Step 2: Primary Objective';
     }
 
@@ -762,7 +789,7 @@ const HTML_APP = `<!DOCTYPE html>
         body: JSON.stringify({ primaryObjective: obj })
       });
       document.getElementById('wizardStep2').style.display = 'none';
-      document.getElementById('wizardStep3').style.display = 'block';
+      document.getElementById('wizardStep3').style.display = 'flex';
       document.getElementById('wizardStepTitle').innerText = 'Step 3: Connect Sales Channels';
     }
 
@@ -832,7 +859,7 @@ const HTML_APP = `<!DOCTYPE html>
             return '<option value="' + h + '" ' + (autoMatch ? 'selected' : '') + '>' + h + '</option>';
           }).join('');
 
-        return '<div><label style="font-size:0.75rem; color:var(--text-muted);">' + f.label + '</label>' +
+        return '<div><label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">' + f.label + '</label>' +
                '<select id="map_' + f.key + '" class="form-control" style="font-size:0.8rem; padding:0.4rem;">' + optionsHtml + '</select></div>';
       }).join('');
     }
@@ -859,11 +886,10 @@ const HTML_APP = `<!DOCTYPE html>
       const data = await res.json();
       const box = document.getElementById('csvValidationBox');
       box.style.display = 'block';
-      box.innerHTML = \`
-        <div style="color:var(--accent); font-weight:700; margin-bottom:0.2rem;">CSV Validation Preview:</div>
-        <div>Total Rows: \${data.totalRowsDetected} | Valid Rows: \${data.validRows} | Warnings: \${data.warningRows}</div>
-        <div>Ready to Import: <strong style="color:\${data.isReadyToImport ? 'var(--success)' : 'var(--danger)'}">\${data.isReadyToImport ? 'YES' : 'NO (Missing required fields)'}</strong></div>
-      \`;
+      box.innerHTML =
+        '<div style="color:var(--navy); font-weight:700; margin-bottom:0.2rem;">CSV Validation Preview:</div>' +
+        '<div>Total Rows: ' + data.totalRowsDetected + ' | Valid Rows: ' + data.validRows + ' | Warnings: ' + data.warningRows + '</div>' +
+        '<div>Ready to Import: <strong style="color:' + (data.isReadyToImport ? 'var(--green)' : 'var(--danger-text)') + '">' + (data.isReadyToImport ? 'YES' : 'NO (Missing required fields)') + '</strong></div>';
     }
 
     async function submitImport() {
@@ -994,16 +1020,19 @@ export default {
 
       // 6. Connect Sales Channel (Requires admin or owner role)
       if (path === '/api/v1/channels/connect' && request.method === 'POST') {
-        await authorizeOrgMembership(env, user.id, targetOrgId, 'admin');
+        const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'admin');
+        const verifiedOrgId = membership.org_id;
         const body = await request.json();
+        const rawProvider = body.provider || 'manual_csv';
+        const provider = rawProvider === 'csv' ? 'manual_csv' : rawProvider;
         const channelId = `chn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
         await env.DB.prepare(`
           INSERT INTO sales_channels (id, org_id, provider, channel_name, external_store_id)
           VALUES (?, ?, ?, ?, ?)
-        `).bind(channelId, verifiedOrgId, body.provider, body.channelName, body.externalStoreId || null).run();
+        `).bind(channelId, verifiedOrgId, provider, body.channelName || 'Sales Channel', body.externalStoreId || null).run();
 
-        return json({ ok: true, channelId, provider: body.provider, name: body.channelName }, corsHeaders);
+        return json({ ok: true, channelId, provider, name: body.channelName || 'Sales Channel' }, corsHeaders);
       }
 
       // 7. Data Import & Normalization Endpoint (Requires member role)

@@ -23,7 +23,7 @@ describe('Multi-Tenant E-Commerce Financial Intelligence SaaS Core Engine & Web 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.headers.get('Content-Type'), 'text/html; charset=utf-8');
     const html = await res.text();
-    assert.ok(html.includes('FinSaaS Intelligence'));
+    assert.ok(html.includes('B-COMPASS'));
   });
 
   test('2. Multi-Tenant Isolation Rule: Data between Org A and Org B must remain completely isolated', async () => {
