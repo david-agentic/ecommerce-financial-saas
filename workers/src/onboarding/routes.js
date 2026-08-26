@@ -7,7 +7,7 @@ import { authorizeOrgMembership } from '../auth/middleware.js';
 export async function handleOnboardingRoutes(request, env, path, user) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Org-ID'
   };
 
@@ -22,16 +22,16 @@ export async function handleOnboardingRoutes(request, env, path, user) {
     const name             = String(body.name || membership.org_name).trim();
     const currency         = String(body.currency || membership.base_currency).toUpperCase();
     const timezone         = String(body.timezone || 'Europe/London').trim();
-    const primaryObjective = String(body.primaryObjective || 'finance_intelligence').trim();
-    const region           = String(body.region || 'UK').trim();
+    const country          = String(body.country || body.region || 'PK').trim();
+    const businessType     = String(body.businessType || body.primaryObjective || 'ecommerce').trim();
 
     await env.DB.prepare(`
       UPDATE organizations
       SET name = ?, base_currency = ?, timezone = ?, primary_objective = ?, region = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
       WHERE id = ?
-    `).bind(name, currency, timezone, primaryObjective, region, membership.org_id).run();
+    `).bind(name, currency, timezone, businessType, country, membership.org_id).run();
 
-    return json({ ok: true, orgId: membership.org_id, name, currency, timezone, primaryObjective, region }, corsHeaders);
+    return json({ ok: true, orgId: membership.org_id, name, currency, timezone, country, businessType, primaryObjective: businessType, region: country }, corsHeaders);
   }
 
   // 2. Channel Connections & Honest Status Registry
@@ -212,6 +212,62 @@ export async function handleOnboardingRoutes(request, env, path, user) {
       isEmptyState: orderCount === 0,
       attentionItems
     }, corsHeaders);
+  }
+
+  // Expense Management: List Expenses
+  if (path === '/api/v1/expenses' && request.method === 'GET') {
+    const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'viewer');
+    try {
+      const result = await env.DB.prepare(`
+        SELECT id, date, category, vendor, description, amount, currency, payment_status, reference, created_at
+        FROM business_expenses
+        WHERE org_id = ?
+        ORDER BY date DESC
+        LIMIT 200
+      `).bind(membership.org_id).all();
+      return json({ ok: true, expenses: result.results || [] }, corsHeaders);
+    } catch (e) {
+      return json({ ok: true, expenses: [] }, corsHeaders);
+    }
+  }
+
+  // Expense Management: Create Expense
+  if (path === '/api/v1/expenses' && request.method === 'POST') {
+    const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
+    const body = await request.json();
+    const id = 'exp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const date = String(body.date || new Date().toISOString().split('T')[0]);
+    const category = String(body.category || 'other');
+    const vendor = String(body.vendor || '').trim();
+    const description = String(body.description || '').trim();
+    const amount = parseFloat(body.amount || 0);
+    const currency = String(body.currency || 'PKR').toUpperCase();
+    const paymentStatus = String(body.paymentStatus || 'paid');
+    const reference = String(body.reference || '').trim();
+
+    if (amount <= 0) return jsonError(400, 'Expense amount must be greater than zero', corsHeaders);
+
+    try {
+      await env.DB.prepare(`
+        INSERT INTO business_expenses (id, org_id, date, category, vendor, description, amount, currency, payment_status, reference)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(id, membership.org_id, date, category, vendor, description, amount, currency, paymentStatus, reference).run();
+      return json({ ok: true, expenseId: id }, corsHeaders);
+    } catch (e) {
+      return jsonError(500, 'Failed to create expense: ' + e.message, corsHeaders);
+    }
+  }
+
+  // Expense Management: Delete Expense
+  if (path.startsWith('/api/v1/expenses/') && request.method === 'DELETE') {
+    const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'admin');
+    const expenseId = path.split('/api/v1/expenses/')[1];
+    if (!expenseId) return jsonError(400, 'Missing expense ID', corsHeaders);
+
+    await env.DB.prepare(`
+      DELETE FROM business_expenses WHERE id = ? AND org_id = ?
+    `).bind(expenseId, membership.org_id).run();
+    return json({ ok: true, deleted: expenseId }, corsHeaders);
   }
 
   return null;

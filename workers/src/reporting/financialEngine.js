@@ -69,6 +69,22 @@ export async function getFinancialSummary(db, orgId, startDate = null, endDate =
   const grossProfit = netProceeds - totalCogs;
   const grossMarginPercent = netSales > 0 ? ((grossProfit / netSales) * 100) : 0;
 
+  // Operating Expenses
+  let totalExpenses = 0;
+  try {
+    const expenseStats = await db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as total_expenses
+      FROM business_expenses
+      WHERE org_id = ?
+    `).bind(orgId).first();
+    totalExpenses = expenseStats?.total_expenses || 0;
+  } catch (e) {
+    // Table may not exist yet
+    totalExpenses = 0;
+  }
+  const netProfit = grossProfit - totalExpenses;
+  const netProfitMarginPercent = netSales > 0 ? ((netProfit / netSales) * 100) : 0;
+
   return {
     orgId,
     period: { startDate, endDate },
@@ -85,8 +101,35 @@ export async function getFinancialSummary(db, orgId, startDate = null, endDate =
       netProceeds: round(netProceeds),
       totalCogs: round(totalCogs),
       grossProfit: round(grossProfit),
-      grossMarginPercent: round(grossMarginPercent)
+      grossMarginPercent: round(grossMarginPercent),
+      totalExpenses: round(totalExpenses),
+      netProfit: round(netProfit),
+      netProfitMarginPercent: round(netProfitMarginPercent)
     }
+  };
+}
+
+export async function getExpenseSummary(db, orgId) {
+  const result = await db.prepare(`
+    SELECT
+      COALESCE(SUM(amount), 0) as total_expenses,
+      COUNT(id) as expense_count
+    FROM business_expenses
+    WHERE org_id = ?
+  `).bind(orgId).first();
+
+  const byCategory = await db.prepare(`
+    SELECT category, COALESCE(SUM(amount), 0) as total
+    FROM business_expenses
+    WHERE org_id = ?
+    GROUP BY category
+    ORDER BY total DESC
+  `).bind(orgId).all();
+
+  return {
+    totalExpenses: round(result?.total_expenses || 0),
+    expenseCount: result?.expense_count || 0,
+    byCategory: byCategory.results || []
   };
 }
 
