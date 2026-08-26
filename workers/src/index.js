@@ -613,7 +613,7 @@ const HTML_APP = `<!DOCTYPE html>
             '<h3>Welcome to B-COMPASS</h3>' +
             '<p>Your financial picture starts with your business data. Add a data source to begin tracking sales, expenses, and profit.</p>' +
             '<div style="display:flex; gap:0.75rem; justify-content:center;">' +
-              '<button type="button" class="btn btn-green" onclick="showView(\'datasources\')">Add Your First Data Source</button>' +
+              '<button type="button" class="btn btn-green" onclick="showView(&apos;datasources&apos;)">Add Your First Data Source</button>' +
               '<button type="button" class="btn btn-outline" onclick="openOnboardingWizard()">Guided Setup</button>' +
             '</div>' +
           '</div>';
@@ -625,7 +625,7 @@ const HTML_APP = `<!DOCTYPE html>
         alertsHtml = attData.attentionItems.map(function(item) {
           var cls = item.severity === 'danger' ? 'alert-danger' : 'alert-warn';
           return '<div class="alert ' + cls + '"><div><strong>' + item.title + '</strong><div style="font-size:0.75rem; margin-top:0.15rem;">' + item.message + '</div></div>' +
-            '<button type="button" class="btn btn-outline btn-sm" onclick="showView(\'' + item.actionView + '\')">Resolve</button></div>';
+            '<button type="button" class="btn btn-outline btn-sm" onclick="showView(&apos;' + item.actionView + '&apos;)">Resolve</button></div>';
         }).join('');
       }
 
@@ -659,7 +659,7 @@ const HTML_APP = `<!DOCTYPE html>
       var orders = data.orders || [];
 
       if (orders.length === 0) {
-        container.innerHTML = '<div class="empty-state"><h3>No Sales Data Yet</h3><p>Connect a sales channel or import a CSV file to see your orders here.</p><button type="button" class="btn btn-green" onclick="showView(\'datasources\')">Go to Data Sources</button></div>';
+        container.innerHTML = '<div class="empty-state"><h3>No Sales Data Yet</h3><p>Connect a sales channel or import a CSV file to see your orders here.</p><button type="button" class="btn btn-green" onclick="showView(&apos;datasources&apos;)">Go to Data Sources</button></div>';
         return;
       }
 
@@ -681,7 +681,7 @@ const HTML_APP = `<!DOCTYPE html>
       var products = data.products || [];
 
       if (products.length === 0) {
-        container.innerHTML = '<div class="empty-state"><h3>No Products Discovered</h3><p>Import sales data with SKU information to automatically build your product catalog.</p><button type="button" class="btn btn-green" onclick="showView(\'datasources\')">Go to Data Sources</button></div>';
+        container.innerHTML = '<div class="empty-state"><h3>No Products Discovered</h3><p>Import sales data with SKU information to automatically build your product catalog.</p><button type="button" class="btn btn-green" onclick="showView(&apos;datasources&apos;)">Go to Data Sources</button></div>';
         return;
       }
 
@@ -689,7 +689,8 @@ const HTML_APP = `<!DOCTYPE html>
       var warn = data.isProfitCalculationIncomplete ? '<div class="alert alert-warn"><div><strong>' + data.uncostedProductsCount + ' products missing costs</strong><div style="font-size:0.75rem; margin-top:0.15rem;">Set unit costs to calculate accurate profit margins.</div></div></div>' : '';
 
       var rows = products.map(function(p) {
-        return '<tr><td><strong>' + p.sku + '</strong></td><td>' + p.title + '</td><td><div style="display:flex; gap:0.35rem; align-items:center;"><input type="number" step="0.01" value="' + p.unit_cost + '" id="cost_' + p.sku + '" class="form-control" style="width:100px;" /><button type="button" class="btn btn-outline btn-sm" onclick="updateCost(\'' + p.sku.replace(/'/g, "\\'") + '\')">Save</button></div></td><td><span class="badge ' + (p.unit_cost > 0 ? 'badge-success' : 'badge-warning') + '">' + (p.unit_cost > 0 ? 'Costed' : 'Missing') + '</span></td></tr>';
+        var safeSku = (p.sku || '').replace(/'/g, "&apos;");
+        return '<tr><td><strong>' + p.sku + '</strong></td><td>' + p.title + '</td><td><div style="display:flex; gap:0.35rem; align-items:center;"><input type="number" step="0.01" value="' + p.unit_cost + '" id="cost_' + p.sku + '" class="form-control" style="width:100px;" /><button type="button" class="btn btn-outline btn-sm" onclick="updateCost(&apos;' + safeSku + '&apos;)">Save</button></div></td><td><span class="badge ' + (p.unit_cost > 0 ? 'badge-success' : 'badge-warning') + '">' + (p.unit_cost > 0 ? 'Costed' : 'Missing') + '</span></td></tr>';
       }).join('');
 
       container.innerHTML = warn +
@@ -725,7 +726,7 @@ const HTML_APP = `<!DOCTYPE html>
       var total = 0;
       var rows = expenses.map(function(e) {
         total += parseFloat(e.amount || 0);
-        return '<tr><td>' + e.date + '</td><td><span class="badge badge-success">' + e.category + '</span></td><td>' + (e.vendor || '-') + '</td><td>' + (e.description || '-') + '</td><td><strong>' + fc(e.amount) + '</strong></td><td><span class="badge ' + (e.payment_status === 'paid' ? 'badge-success' : 'badge-warning') + '">' + e.payment_status + '</span></td><td><button type="button" class="btn btn-outline btn-sm" onclick="deleteExpense(\'' + e.id + '\')">Delete</button></td></tr>';
+        return '<tr><td>' + e.date + '</td><td><span class="badge badge-success">' + e.category + '</span></td><td>' + (e.vendor || '-') + '</td><td>' + (e.description || '-') + '</td><td><strong>' + fc(e.amount) + '</strong></td><td><span class="badge ' + (e.payment_status === 'paid' ? 'badge-success' : 'badge-warning') + '">' + e.payment_status + '</span></td><td><button type="button" class="btn btn-outline btn-sm" onclick="deleteExpense(&apos;' + e.id + '&apos;)">Delete</button></td></tr>';
       }).join('');
 
       container.innerHTML =
