@@ -1,6 +1,6 @@
 /**
  * Multi-Tenant E-Commerce Financial Intelligence SaaS API Router & SPA Engine
- * B-COMPASS — Know Your Business. Know Your Direction.
+ * B-COMPASS - Know Your Business. Know Your Direction.
  */
 
 import { handleAuthRoutes }       from './auth/routes.js';
@@ -18,7 +18,7 @@ const HTML_APP = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>B-COMPASS — Know Your Business. Know Your Direction.</title>
+  <title>B-COMPASS - Know Your Business. Know Your Direction.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
@@ -154,7 +154,7 @@ const HTML_APP = `<!DOCTYPE html>
         ⚡ Quick Demo Login (One-Click Start)
       </button>
 
-      <div style="text-align:center; font-size:0.7rem; font-weight:700; color:var(--text-muted); letter-spacing:0.5px;">— OR SIGN IN WITH YOUR ACCOUNT —</div>
+      <div style="text-align:center; font-size:0.7rem; font-weight:700; color:var(--text-muted); letter-spacing:0.5px;">- OR SIGN IN WITH YOUR ACCOUNT -</div>
 
       <div style="display:flex; border-bottom:1px solid var(--border-color);">
         <button type="button" id="tabSignin" style="flex:1; padding:0.6rem; background:transparent; border:none; border-bottom:2px solid var(--green); color:var(--green); font-weight:700; cursor:pointer;" onclick="setAuthMode(false)">Sign In</button>
@@ -666,12 +666,32 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     async function renderSales(container) {
+      const res = await authFetch('/api/v1/orders?orgId=' + currentOrgId);
+      const data = await res.json();
+      const orders = data.orders || [];
+
+      let rowsHtml = orders.map(o =>
+        '<tr>' +
+          '<td><strong>' + o.order_number + '</strong></td>' +
+          '<td>' + (o.provider || 'manual_csv').toUpperCase() + '</td>' +
+          '<td>' + o.external_order_id + '</td>' +
+          '<td>£' + parseFloat(o.gross_amount).toFixed(2) + '</td>' +
+          '<td style="color:var(--warning-text);">-£' + parseFloat(o.discount_amount).toFixed(2) + '</td>' +
+          '<td><strong>£' + parseFloat(o.net_amount).toFixed(2) + '</strong></td>' +
+          '<td><span class="badge badge-success">' + o.financial_status + '</span></td>' +
+        '</tr>'
+      ).join('');
+
+      if (!rowsHtml) {
+        rowsHtml = '<tr><td colspan="7" style="color:var(--text-muted); text-align:center; padding:2rem;">No orders imported yet. Use "+ Import Orders" above to ingest Shopify, TikTok, or CSV files.</td></tr>';
+      }
+
       container.innerHTML =
         '<div class="card">' +
-          '<div class="card-header"><div class="card-title">Unified Canonical Orders</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Import Orders</button></div>' +
+          '<div class="card-header"><div class="card-title">Unified Canonical Orders (' + orders.length + ')</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Import Orders</button></div>' +
           '<table>' +
-            '<thead><tr><th>Order ID</th><th>Provider</th><th>Order #</th><th>Gross</th><th>Discounts</th><th>Net Amount</th><th>Status</th></tr></thead>' +
-            '<tbody><tr><td colspan="7" style="color:var(--text-muted); text-align:center; padding:2rem;">Use "+ Import Data" above to ingest Shopify, TikTok, or WooCommerce orders.</td></tr></tbody>' +
+            '<thead><tr><th>Order #</th><th>Channel Provider</th><th>External Ref</th><th>Gross Amount</th><th>Discounts</th><th>Net Total</th><th>Financial Status</th></tr></thead>' +
+            '<tbody>' + rowsHtml + '</tbody>' +
           '</table>' +
         '</div>';
     }
@@ -719,12 +739,31 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     async function renderImports(container) {
+      const res = await authFetch('/api/v1/import/jobs?orgId=' + currentOrgId);
+      const data = await res.json();
+      const jobs = data.jobs || [];
+
+      let rowsHtml = jobs.map(j =>
+        '<tr>' +
+          '<td><code style="font-size:0.75rem;">' + j.id + '</code></td>' +
+          '<td><strong>' + j.source_name + '</strong> (' + j.import_type + ')</td>' +
+          '<td>' + j.total_rows + '</td>' +
+          '<td style="color:var(--green); font-weight:700;">' + j.successful_rows + '</td>' +
+          '<td style="color:' + (j.failed_rows > 0 ? 'var(--danger-text)' : 'var(--text-muted)') + ';">' + (j.skipped_rows + j.failed_rows) + '</td>' +
+          '<td><span class="badge ' + (j.status === 'completed' ? 'badge-success' : 'badge-danger') + '">' + j.status + '</span></td>' +
+        '</tr>'
+      ).join('');
+
+      if (!rowsHtml) {
+        rowsHtml = '<tr><td colspan="6" style="color:var(--text-muted); text-align:center; padding:2rem;">No import jobs recorded yet. Launch the Import Wizard above to ingest historical channel files.</td></tr>';
+      }
+
       container.innerHTML =
         '<div class="card">' +
-          '<div class="card-header"><div class="card-title">Import & Audit Logs</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Launch Import Wizard</button></div>' +
+          '<div class="card-header"><div class="card-title">Import & Audit Jobs (' + jobs.length + ')</div><button type="button" class="btn btn-green" onclick="openImportModal()">+ Launch Import Wizard</button></div>' +
           '<table>' +
-            '<thead><tr><th>Job ID</th><th>Import Type</th><th>Total Rows</th><th>Successful</th><th>Skipped/Failed</th><th>Status</th></tr></thead>' +
-            '<tbody><tr><td colspan="6" style="color:var(--text-muted); text-align:center; padding:2rem;">Launch the Import Wizard above to ingest historical channel files or API JSON payloads.</td></tr></tbody>' +
+            '<thead><tr><th>Job Ref</th><th>Source & Type</th><th>Total Rows</th><th>Successful</th><th>Skipped/Failed</th><th>Status</th></tr></thead>' +
+            '<tbody>' + rowsHtml + '</tbody>' +
           '</table>' +
         '</div>';
     }
@@ -1037,7 +1076,8 @@ export default {
 
       // 7. Data Import & Normalization Endpoint (Requires member role)
       if (path === '/api/v1/import' && request.method === 'POST') {
-        await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
+        const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
+        const verifiedOrgId = membership.org_id;
         const body = await request.json();
         const result = await processImportJob(env.DB, {
           orgId: verifiedOrgId,
@@ -1053,7 +1093,8 @@ export default {
 
       // 8. CSV Onboarding & Mapping Endpoint (Requires member role)
       if (path === '/api/v1/import/csv' && request.method === 'POST') {
-        await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
+        const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'member');
+        const verifiedOrgId = membership.org_id;
         const body = await request.json();
         const result = await processCsvImport(env.DB, {
           orgId: verifiedOrgId,
@@ -1085,6 +1126,33 @@ export default {
       if (path === '/api/v1/reconciliation/payouts' && request.method === 'GET') {
         const reconciliations = await reconcilePayouts(env.DB, verifiedOrgId);
         return json({ ok: true, reconciliations }, corsHeaders);
+      }
+
+      // 12. Get Unified Canonical Orders List
+      if (path === '/api/v1/orders' && request.method === 'GET') {
+        const { results: orders } = await env.DB.prepare(`
+          SELECT o.id, o.external_order_id, o.order_number, o.currency, o.gross_amount, o.discount_amount, o.shipping_amount, o.tax_amount, (o.gross_amount - o.discount_amount + o.shipping_amount + o.tax_amount) as net_amount, o.financial_status, c.provider, o.ordered_at
+          FROM canonical_orders o
+          LEFT JOIN sales_channels c ON o.channel_id = c.id
+          WHERE o.org_id = ?
+          ORDER BY o.ordered_at DESC
+          LIMIT 100
+        `).bind(verifiedOrgId).all();
+
+        return json({ ok: true, orders: orders || [] }, corsHeaders);
+      }
+
+      // 13. Get Import Jobs & Audit Logs
+      if (path === '/api/v1/import/jobs' && request.method === 'GET') {
+        const { results: jobs } = await env.DB.prepare(`
+          SELECT j.id, j.import_type, j.source_name, j.total_rows, j.successful_rows, j.skipped_rows, j.failed_rows, j.status, j.started_at, j.completed_at
+          FROM import_jobs j
+          WHERE j.org_id = ?
+          ORDER BY j.started_at DESC
+          LIMIT 50
+        `).bind(verifiedOrgId).all();
+
+        return json({ ok: true, jobs: jobs || [] }, corsHeaders);
       }
 
       return jsonError(404, 'Endpoint not found', corsHeaders);
