@@ -579,7 +579,7 @@ const HTML_APP = `<!DOCTYPE html>
               '<strong style="color:var(--navy); font-size:0.9rem;">' + item.title + '</strong>' +
               '<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">' + item.message + '</div>' +
             '</div>' +
-            '<button type="button" class="btn btn-outline" onclick="showView(\'' + item.actionView + '\')">Resolve</button>' +
+            '<button type="button" class="btn btn-outline" onclick="showView(' + JSON.stringify(item.actionView) + ')">Resolve</button>' +
           '</div>'
         ).join('');
       }
@@ -631,7 +631,7 @@ const HTML_APP = `<!DOCTYPE html>
           '<td>' +
             '<div style="display:flex; gap:0.4rem; align-items:center;">' +
               '<input type="number" step="0.01" value="' + p.unit_cost + '" id="cost_' + p.sku + '" class="form-control" style="width:110px;" />' +
-              '<button type="button" class="btn btn-outline" onclick="updateCost(\'' + p.sku + '\')">Save</button>' +
+              '<button type="button" class="btn btn-outline" onclick="updateCost(' + JSON.stringify(p.sku) + ')">Save</button>' +
             '</div>' +
           '</td>' +
           '<td><span class="badge ' + (p.unit_cost > 0 ? 'badge-success' : 'badge-warning') + '">' + (p.unit_cost > 0 ? 'Costed' : 'Missing Cost') + '</span></td>' +
@@ -818,7 +818,7 @@ const HTML_APP = `<!DOCTYPE html>
     }
 
     function parseCsvText(text) {
-      const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+      const lines = text.split(/\\r?\\n/).filter(l => l.trim() !== '');
       if (lines.length === 0) return;
 
       detectedCsvHeaders = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));

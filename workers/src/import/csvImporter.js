@@ -37,7 +37,7 @@ export async function processCsvImport(db, { orgId, channelId, csvRows, columnMa
       const taxAmount      = parseAmount(getMappedValue(rawRow, columnMapping, 'tax_amount'));
       const orderedAt      = getMappedValue(rawRow, columnMapping, 'ordered_at') || new Date().toISOString();
 
-      const orderId = `ord_csv_${extOrderId}`;
+      const orderId = `ord_csv_${orgId}_${channelId}_${extOrderId}`;
       const netAmount = grossAmount - discountAmount + shippingAmount + taxAmount;
 
       // Upsert Order Header
@@ -66,7 +66,7 @@ export async function processCsvImport(db, { orgId, channelId, csvRows, columnMa
       const unitPriceVal = parseAmount(getMappedValue(rawRow, columnMapping, 'unit_price')) || (grossAmount / (qtyVal || 1));
 
       if (skuVal) {
-        const lineItemId = `itm_csv_${extOrderId}_${skuVal}`;
+        const lineItemId = `itm_csv_${orgId}_${channelId}_${extOrderId}_${skuVal}`;
         await db.prepare(`
           INSERT INTO canonical_order_items (
             id, org_id, order_id, sku, title, qty, unit_price, unit_cost
@@ -78,7 +78,8 @@ export async function processCsvImport(db, { orgId, channelId, csvRows, columnMa
       }
 
       // Upsert Financial Sale Event
-      const eventId = `evt_csv_sale_${extOrderId}`;
+      const existingSaleEvt = await db.prepare(`SELECT id FROM canonical_financial_events WHERE org_id = ? AND channel_id = ? AND external_event_id = ? AND event_type = 'sale'`).bind(orgId, channelId, `csv_sale_${extOrderId}`).first();
+      const eventId = existingSaleEvt ? existingSaleEvt.id : `evt_csv_${orgId}_${channelId}_${extOrderId}`;
       await db.prepare(`
         INSERT INTO canonical_financial_events (
           id, org_id, channel_id, order_id, import_job_id, external_event_id, event_type, amount, currency, description, occurred_at
@@ -89,7 +90,8 @@ export async function processCsvImport(db, { orgId, channelId, csvRows, columnMa
       // Optional Platform Fee Mapping
       const feeVal = parseAmount(getMappedValue(rawRow, columnMapping, 'platform_fee'));
       if (feeVal > 0) {
-        const feeEvtId = `evt_csv_fee_${extOrderId}`;
+        const existingFeeEvt = await db.prepare(`SELECT id FROM canonical_financial_events WHERE org_id = ? AND channel_id = ? AND external_event_id = ? AND event_type = 'platform_fee'`).bind(orgId, channelId, `csv_fee_${extOrderId}`).first();
+        const feeEvtId = existingFeeEvt ? existingFeeEvt.id : `evt_csv_fee_${orgId}_${channelId}_${extOrderId}`;
         await db.prepare(`
           INSERT INTO canonical_financial_events (
             id, org_id, channel_id, order_id, import_job_id, external_event_id, event_type, amount, currency, description, occurred_at
