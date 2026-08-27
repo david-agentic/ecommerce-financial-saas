@@ -248,7 +248,13 @@ const HTML_APP = `<!DOCTYPE html>
   <!-- Main View Area -->
   <main>
     <header>
-      <div class="header-title" id="pageTitle">Overview</div>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div class="header-title" id="pageTitle">Overview</div>
+        <div style="display:flex; background:#e2e8f0; padding:0.15rem; border-radius:6px; font-size:0.75rem; font-weight:700;" id="roleToggleContainer">
+          <button type="button" id="roleOwnerBtn" style="background:var(--navy); color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; cursor:pointer;" onclick="setRoleMode('owner')">Owner View</button>
+          <button type="button" id="roleFinanceBtn" style="background:transparent; color:var(--text-muted); border:none; padding:0.25rem 0.6rem; border-radius:4px; cursor:pointer;" onclick="setRoleMode('finance')">Finance View</button>
+        </div>
+      </div>
       <div class="header-actions" id="headerActions"></div>
     </header>
     <div class="content-area" id="contentArea"></div>
@@ -414,6 +420,21 @@ const HTML_APP = `<!DOCTYPE html>
     let parsedCsvRows = [];
     let detectedCsvHeaders = [];
     let orgCurrency = 'PKR';
+    var activeRoleMode = 'owner';
+
+    function setRoleMode(mode) {
+      activeRoleMode = mode;
+      var ob = document.getElementById('roleOwnerBtn');
+      var fb = document.getElementById('roleFinanceBtn');
+      if (ob && fb) {
+        ob.style.background = mode === 'owner' ? 'var(--navy)' : 'transparent';
+        ob.style.color = mode === 'owner' ? 'white' : 'var(--text-muted)';
+        fb.style.background = mode === 'finance' ? 'var(--navy)' : 'transparent';
+        fb.style.color = mode === 'finance' ? 'white' : 'var(--text-muted)';
+      }
+      renderView();
+    }
+    window.setRoleMode = setRoleMode;
 
     // ── Currency ──
     const CURRENCY_MAP = { PKR: 'Rs', USD: '$', GBP: String.fromCharCode(163), EUR: String.fromCharCode(8364), AED: 'Dh', SAR: 'SR' };
