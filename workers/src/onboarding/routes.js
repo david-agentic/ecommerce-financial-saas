@@ -3,6 +3,13 @@
  */
 
 import { authorizeOrgMembership } from '../auth/middleware.js';
+import {
+  getFinancialSummary,
+  computeDataConfidence,
+  getPeriodMovement,
+  getAttentionCenterItems,
+  getProfitWaterfall
+} from '../reporting/financialEngine.js';
 
 export async function handleOnboardingRoutes(request, env, path, user) {
   const corsHeaders = {
@@ -268,6 +275,30 @@ export async function handleOnboardingRoutes(request, env, path, user) {
       DELETE FROM business_expenses WHERE id = ? AND org_id = ?
     `).bind(expenseId, membership.org_id).run();
     return json({ ok: true, deleted: expenseId }, corsHeaders);
+  }
+
+  // Financial Intelligence Command Center Payload
+  if (path === '/api/v1/intelligence/command-center' && request.method === 'GET') {
+    const membership = await authorizeOrgMembership(env, user.id, targetOrgId, 'viewer');
+    const orgId = membership.org_id;
+
+    const [summary, confidence, movement, attention, waterfall] = await Promise.all([
+      getFinancialSummary(env.DB, orgId),
+      computeDataConfidence(env.DB, orgId),
+      getPeriodMovement(env.DB, orgId),
+      getAttentionCenterItems(env.DB, orgId),
+      getProfitWaterfall(env.DB, orgId)
+    ]);
+
+    return json({
+      ok: true,
+      orgId,
+      summary,
+      confidence,
+      movement,
+      attention,
+      waterfall
+    }, corsHeaders);
   }
 
   return null;

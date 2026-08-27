@@ -49,16 +49,25 @@ export async function authenticateUser(request, env) {
 }
 
 export async function authorizeOrgMembership(env, userId, targetOrgId, minRole = 'viewer') {
-  if (!targetOrgId) {
-    throw new Error('BAD_REQUEST: Target organization ID is required');
-  }
+  let membership;
 
-  const membership = await env.DB.prepare(`
-    SELECT m.id, m.org_id, m.user_id, m.role, o.name as org_name, o.base_currency, o.status as org_status
-    FROM org_memberships m
-    JOIN organizations o ON m.org_id = o.id
-    WHERE m.user_id = ? AND m.org_id = ? AND o.status = 'Active'
-  `).bind(userId, targetOrgId).first();
+  if (!targetOrgId) {
+    membership = await env.DB.prepare(`
+      SELECT m.id, m.org_id, m.user_id, m.role, o.name as org_name, o.base_currency, o.status as org_status
+      FROM org_memberships m
+      JOIN organizations o ON m.org_id = o.id
+      WHERE m.user_id = ? AND o.status = 'Active'
+      ORDER BY m.created_at ASC
+      LIMIT 1
+    `).bind(userId).first();
+  } else {
+    membership = await env.DB.prepare(`
+      SELECT m.id, m.org_id, m.user_id, m.role, o.name as org_name, o.base_currency, o.status as org_status
+      FROM org_memberships m
+      JOIN organizations o ON m.org_id = o.id
+      WHERE m.user_id = ? AND m.org_id = ? AND o.status = 'Active'
+    `).bind(userId, targetOrgId).first();
+  }
 
   if (!membership) {
     throw new Error(`FORBIDDEN: User does not have authorized membership access to organization '${targetOrgId}'`);

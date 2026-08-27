@@ -109,6 +109,165 @@ export async function getFinancialSummary(db, orgId, startDate = null, endDate =
   };
 }
 
+export async function computeDataConfidence(db, orgId) {
+  let score = 100;
+  const issues = [];
+
+  // 1. Check for uncosted products (missing COGS)
+  try {
+    const uncosted = await db.prepare(`
+      SELECT COUNT(DISTINCT sku) as count, COALESCE(SUM(qty * 0), 0) as dummy
+      FROM canonical_order_items
+      WHERE org_id = ? AND (unit_cost IS NULL OR unit_cost = 0)
+    `).bind(orgId).first();
+    const count = uncosted?.count || 0;
+    if (count > 0) {
+      score -= Math.min(30, count * 5);
+      issues.push(`${count} product(s) missing unit purchase cost (COGS)`);
+    }
+  } catch (e) {}
+
+  // 2. Check for missing expenses
+  try {
+    const expCount = await db.prepare(`
+      SELECT COUNT(id) as count FROM business_expenses WHERE org_id = ?
+    `).bind(orgId).first();
+    if (!expCount || expCount.count === 0) {
+      score -= 10;
+      issues.push("No operating expenses recorded yet");
+    }
+  } catch (e) {}
+
+  // 3. Check channel connections
+  try {
+    const chCount = await db.prepare(`
+      SELECT COUNT(id) as count FROM sales_channels WHERE org_id = ?
+    `).bind(orgId).first();
+    if (!chCount || chCount.count === 0) {
+      score -= 20;
+      issues.push("No sales channels connected");
+    }
+  } catch (e) {}
+
+  score = Math.max(0, Math.min(100, score));
+  return {
+    score,
+    rating: score >= 85 ? 'High' : (score >= 60 ? 'Moderate' : 'Low (Estimated)'),
+    isEstimated: score < 85,
+    issues
+  };
+}
+
+export async function getPeriodMovement(db, orgId) {
+  const current = await getFinancialSummary(db, orgId);
+  const m = current.metrics;
+
+  const positiveDrivers = [];
+  const negativeDrivers = [];
+
+  if (m.grossSales > 0) {
+    positiveDrivers.push({ title: "Gross Sales Revenue", impact: m.grossSales, note: "Core order revenue" });
+  }
+  if (m.totalCogs > 0) {
+    negativeDrivers.push({ title: "Cost of Goods Sold (COGS)", impact: m.totalCogs, note: "Inventory procurement cost" });
+  }
+  if (m.totalExpenses > 0) {
+    negativeDrivers.push({ title: "Operating Expenses", impact: m.totalExpenses, note: "Rent, marketing, overheads" });
+  }
+  if (m.totalFees > 0) {
+    negativeDrivers.push({ title: "Platform & Processing Fees", impact: m.totalFees, note: "Channel & gateway commissions" });
+  }
+  if (m.totalRefunds > 0) {
+    negativeDrivers.push({ title: "Discounts & Refunds", impact: m.totalRefunds + m.totalDiscounts, note: "Deducted from sales" });
+  }
+
+  return {
+    netProfit: m.netProfit,
+    netMarginPercent: m.netProfitMarginPercent,
+    positiveDrivers,
+    negativeDrivers
+  };
+}
+
+export async function getAttentionCenterItems(db, orgId) {
+  const items = [];
+
+  // Check 1: Missing COGS
+  try {
+    const uncosted = await db.prepare(`
+      SELECT COUNT(DISTINCT sku) as count
+      FROM canonical_order_items
+      WHERE org_id = ? AND (unit_cost IS NULL OR unit_cost = 0)
+    `).bind(orgId).first();
+    const count = uncosted?.count || 0;
+    if (count > 0) {
+      items.push({
+        id: 'att_cogs',
+        severity: 'danger',
+        title: `${count} Product(s) Missing Unit Cost`,
+        message: 'Your reported profit is overstated because product costs are unassigned.',
+        impactText: 'Profit Calculation Incomplete',
+        actionText: 'Set Product Costs',
+        actionView: 'cogs'
+      });
+    }
+  } catch (e) {}
+
+  // Check 2: Expenses
+  try {
+    const expCount = await db.prepare(`
+      SELECT COUNT(id) as count FROM business_expenses WHERE org_id = ?
+    `).bind(orgId).first();
+    if (!expCount || expCount.count === 0) {
+      items.push({
+        id: 'att_exp',
+        severity: 'warn',
+        title: 'No Operating Expenses Recorded',
+        message: 'Add marketing, rent, and software costs to see your true Net Profit.',
+        impactText: 'Net Profit Overhead Missing',
+        actionText: 'Add Expense',
+        actionView: 'expenses'
+      });
+    }
+  } catch (e) {}
+
+  // Check 3: Channels
+  try {
+    const chCount = await db.prepare(`
+      SELECT COUNT(id) as count FROM sales_channels WHERE org_id = ?
+    `).bind(orgId).first();
+    if (!chCount || chCount.count === 0) {
+      items.push({
+        id: 'att_ch',
+        severity: 'warn',
+        title: 'No Sales Data Source Connected',
+        message: 'Import a CSV file or connect Shopify/Daraz to generate your financial compass.',
+        impactText: 'No Sales Data',
+        actionText: 'Connect Channel',
+        actionView: 'datasources'
+      });
+    }
+  } catch (e) {}
+
+  return items;
+}
+
+export async function getProfitWaterfall(db, orgId) {
+  const s = await getFinancialSummary(db, orgId);
+  const m = s.metrics;
+
+  return [
+    { label: 'Gross Sales', amount: m.grossSales, type: 'start' },
+    { label: 'Discounts & Refunds', amount: - (m.totalDiscounts + m.totalRefunds), type: 'subtraction' },
+    { label: 'Net Sales', amount: m.netSales, type: 'subtotal' },
+    { label: 'Platform & Gateway Fees', amount: - m.totalFees, type: 'subtraction' },
+    { label: 'Cost of Goods Sold (COGS)', amount: - m.totalCogs, type: 'subtraction' },
+    { label: 'Gross Profit', amount: m.grossProfit, type: 'subtotal' },
+    { label: 'Operating Expenses', amount: - m.totalExpenses, type: 'subtraction' },
+    { label: 'Net Profit', amount: m.netProfit, type: 'final' }
+  ];
+}
+
 export async function getExpenseSummary(db, orgId) {
   const result = await db.prepare(`
     SELECT

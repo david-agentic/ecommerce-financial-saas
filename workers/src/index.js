@@ -199,44 +199,44 @@ const HTML_APP = `<!DOCTYPE html>
       <select id="orgSelect" onchange="switchOrg(this.value)"></select>
     </div>
     <nav>
-      <div class="nav-section">Intelligence</div>
+      <div class="nav-section">Command Center</div>
       <button type="button" class="nav-item active" data-view="overview" onclick="showView('overview', event)">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        Overview
+        HOME
       </button>
 
-      <div class="nav-section">Financial Data</div>
+      <div class="nav-section">Business Performance</div>
       <button type="button" class="nav-item" data-view="sales" onclick="showView('sales', event)">
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-        Sales
+        PERFORMANCE
       </button>
       <button type="button" class="nav-item" data-view="cogs" onclick="showView('cogs', event)">
         <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-        Products & Costs
+        PRODUCTS
+      </button>
+
+      <div class="nav-section">Cash & Costs</div>
+      <button type="button" class="nav-item" data-view="payouts" onclick="showView('payouts', event)">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        MONEY
       </button>
       <button type="button" class="nav-item" data-view="expenses" onclick="showView('expenses', event)">
         <svg viewBox="0 0 24 24"><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path><path d="M12 2L2 7l10 5 10-5L12 2z"></path></svg>
-        Expenses
-      </button>
-      <button type="button" class="nav-item" data-view="payouts" onclick="showView('payouts', event)">
-        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
-        Payouts
+        Expenses & Ads
       </button>
 
-      <div class="nav-section">Analysis</div>
+      <div class="nav-section">Intelligence & Data</div>
       <button type="button" class="nav-item" data-view="reports" onclick="showView('reports', event)">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        Reports
+        ANALYZE
       </button>
-
-      <div class="nav-section">Management</div>
       <button type="button" class="nav-item" data-view="datasources" onclick="showView('datasources', event)">
         <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-        Data Sources
+        CONNECT
       </button>
       <button type="button" class="nav-item" data-view="settings" onclick="showView('settings', event)">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        Settings
+        MANAGE
       </button>
     </nav>
     <div class="sidebar-user">
@@ -598,55 +598,134 @@ const HTML_APP = `<!DOCTYPE html>
       }
     }
 
-    // ── Overview ──
+    // ── Command Center (Home) ──
     async function renderOverview(container) {
-      var pnlRes = await authFetch('/api/v1/reports/financial?orgId=' + currentOrgId);
-      var pnlData = await pnlRes.json();
-      var m = pnlData.report && pnlData.report.metrics ? pnlData.report.metrics : {};
+      var res = await authFetch('/api/v1/intelligence/command-center?orgId=' + currentOrgId);
+      var data = await res.json();
+      if (!data.ok) {
+        container.innerHTML = '<div class="card" style="padding:1.5rem; color:var(--danger-text);">Failed to load Command Center intelligence</div>';
+        return;
+      }
 
-      var attRes = await authFetch('/api/v1/reports/attention?orgId=' + currentOrgId);
-      var attData = await attRes.json();
+      var summary = data.summary || {};
+      var m = summary.metrics || {};
+      var confidence = data.confidence || { score: 100, rating: 'High', issues: [] };
+      var movement = data.movement || { positiveDrivers: [], negativeDrivers: [] };
+      var attention = data.attention || [];
+      var waterfall = data.waterfall || [];
 
-      if (attData.isEmptyState) {
+      if ((m.grossSales || 0) === 0 && attention.length === 0) {
         container.innerHTML =
           '<div class="empty-state">' +
-            '<h3>Welcome to B-COMPASS</h3>' +
-            '<p>Your financial picture starts with your business data. Add a data source to begin tracking sales, expenses, and profit.</p>' +
+            '<h3>Welcome to B-COMPASS Command Center</h3>' +
+            '<p>Connect your business channels or upload sales CSV data to calculate your true Net Profit and generate decision alerts.</p>' +
             '<div style="display:flex; gap:0.75rem; justify-content:center;">' +
-              '<button type="button" class="btn btn-green" onclick="showView(&apos;datasources&apos;)">Add Your First Data Source</button>' +
+              '<button type="button" class="btn btn-green" onclick="showView(&apos;datasources&apos;)">Add Data Source</button>' +
               '<button type="button" class="btn btn-outline" onclick="openOnboardingWizard()">Guided Setup</button>' +
             '</div>' +
           '</div>';
         return;
       }
 
-      var alertsHtml = '';
-      if (attData.attentionItems && attData.attentionItems.length > 0) {
-        alertsHtml = attData.attentionItems.map(function(item) {
-          var cls = item.severity === 'danger' ? 'alert-danger' : 'alert-warn';
-          return '<div class="alert ' + cls + '"><div><strong>' + item.title + '</strong><div style="font-size:0.75rem; margin-top:0.15rem;">' + item.message + '</div></div>' +
-            '<button type="button" class="btn btn-outline btn-sm" onclick="showView(&apos;' + item.actionView + '&apos;)">Resolve</button></div>';
-        }).join('');
+      // 1. Data Confidence Banner
+      var confBanner = '';
+      if (confidence.isEstimated || confidence.score < 85) {
+        var issueText = confidence.issues.join(' | ');
+        confBanner =
+          '<div class="alert alert-warn" style="margin-bottom:1rem; border-left:4px solid var(--warn-text);">' +
+            '<div>' +
+              '<strong>Financial Data Confidence: ' + confidence.score + '% (' + confidence.rating + ')</strong>' +
+              '<div style="font-size:0.75rem; margin-top:0.15rem;">Your profit is estimated: ' + issueText + '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-outline btn-sm" onclick="showView(&apos;cogs&apos;)">Complete Data</button>' +
+          '</div>';
       }
 
-      var gs = m.grossSales || 0;
-      var ns = m.netSales || 0;
-      var te = m.totalExpenses || 0;
-      var gp = m.grossProfit || 0;
-      var np = m.netProfit !== undefined ? m.netProfit : gp;
+      // 2. Executive Health Summary Cards
+      var np = m.netProfit || 0;
       var npm = m.netProfitMarginPercent || 0;
-      var tf = m.totalFees || 0;
-
-      container.innerHTML =
-        alertsHtml +
-        '<div class="kpi-grid">' +
-          '<div class="kpi-card"><div class="kpi-label">Gross Sales</div><div class="kpi-val">' + fc(gs) + '</div><div class="kpi-sub">' + (m.totalOrders || 0) + ' orders</div></div>' +
-          '<div class="kpi-card"><div class="kpi-label">Net Sales</div><div class="kpi-val">' + fc(ns) + '</div><div class="kpi-sub">After discounts & refunds</div></div>' +
-          '<div class="kpi-card"><div class="kpi-label">Platform Fees</div><div class="kpi-val" style="color:var(--warn-text);">' + fc(tf) + '</div><div class="kpi-sub">Channel & processing fees</div></div>' +
-          '<div class="kpi-card"><div class="kpi-label">Expenses</div><div class="kpi-val" style="color:var(--warn-text);">' + fc(te) + '</div><div class="kpi-sub">Operating costs</div></div>' +
-          '<div class="kpi-card"><div class="kpi-label">Gross Profit</div><div class="kpi-val" style="color:var(--green);">' + fc(gp) + '</div><div class="kpi-sub">Margin: ' + (m.grossMarginPercent || 0) + '%</div></div>' +
-          '<div class="kpi-card"><div class="kpi-label">Net Profit</div><div class="kpi-val" style="color:' + (np >= 0 ? 'var(--green)' : 'var(--danger-text)') + ';">' + fc(np) + '</div><div class="kpi-sub">Margin: ' + npm + '%</div></div>' +
+      var healthCards =
+        '<div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:1rem;">' +
+          '<div class="kpi-card">' +
+            '<div class="kpi-label">Net Profit</div>' +
+            '<div class="kpi-val" style="color:' + (np >= 0 ? 'var(--green)' : 'var(--danger-text)') + ';">' + fc(np) + '</div>' +
+            '<div class="kpi-sub">Margin: ' + npm + '%</div>' +
+          '</div>' +
+          '<div class="kpi-card">' +
+            '<div class="kpi-label">Net Sales</div>' +
+            '<div class="kpi-val">' + fc(m.netSales || 0) + '</div>' +
+            '<div class="kpi-sub">' + (m.totalOrders || 0) + ' total orders</div>' +
+          '</div>' +
+          '<div class="kpi-card">' +
+            '<div class="kpi-label">Operating Expenses</div>' +
+            '<div class="kpi-val" style="color:var(--warn-text);">' + fc(m.totalExpenses || 0) + '</div>' +
+            '<div class="kpi-sub">Ad spend & overheads</div>' +
+          '</div>' +
+          '<div class="kpi-card">' +
+            '<div class="kpi-label">Data Confidence</div>' +
+            '<div class="kpi-val" style="color:' + (confidence.score >= 80 ? 'var(--green)' : 'var(--warn-text)') + ';">' + confidence.score + '%</div>' +
+            '<div class="kpi-sub">' + confidence.rating + '</div>' +
+          '</div>' +
         '</div>';
+
+      // 3. Attention Center
+      var attHtml = '';
+      if (attention.length > 0) {
+        var attCards = attention.map(function(item) {
+          var cls = item.severity === 'danger' ? 'alert-danger' : 'alert-warn';
+          return '<div class="alert ' + cls + '" style="margin-bottom:0.5rem;">' +
+            '<div>' +
+              '<strong>' + item.title + '</strong>' +
+              '<div style="font-size:0.75rem; margin-top:0.15rem;">' + item.message + '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-outline btn-sm" onclick="showView(&apos;' + item.actionView + '&apos;)">' + item.actionText + '</button>' +
+          '</div>';
+        }).join('');
+
+        attHtml =
+          '<div class="card" style="margin-bottom:1rem; padding:1rem;">' +
+            '<div class="card-title" style="margin-bottom:0.75rem; color:var(--navy);">Attention Needed (Financial Exceptions)</div>' +
+            attCards +
+          '</div>';
+      }
+
+      // 4. Movement Explanation Engine (What Changed?)
+      var posHtml = (movement.positiveDrivers || []).map(function(d) {
+        return '<div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid #f1f5f9; font-size:0.8rem;"><span>' + d.title + ' <small style="color:var(--text-muted);">(' + d.note + ')</small></span><strong style="color:var(--green);">+' + fc(d.impact) + '</strong></div>';
+      }).join('') || '<div style="font-size:0.8rem; color:var(--text-muted);">No positive drivers recorded</div>';
+
+      var negHtml = (movement.negativeDrivers || []).map(function(d) {
+        return '<div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid #f1f5f9; font-size:0.8rem;"><span>' + d.title + ' <small style="color:var(--text-muted);">(' + d.note + ')</small></span><strong style="color:var(--danger-text);">' + fc(-d.impact) + '</strong></div>';
+      }).join('') || '<div style="font-size:0.8rem; color:var(--text-muted);">No negative drivers recorded</div>';
+
+      var movementHtml =
+        '<div class="card" style="margin-bottom:1rem; padding:1.25rem;">' +
+          '<div class="card-title" style="margin-bottom:0.5rem; color:var(--navy);">What Changed? (Profit Movement & Drivers)</div>' +
+          '<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.85rem;">Breakdown of financial drivers impacting your Net Profit</div>' +
+          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">' +
+            '<div><div style="font-weight:700; font-size:0.75rem; color:var(--green); margin-bottom:0.4rem;">POSITIVE DRIVERS (+)</div>' + posHtml + '</div>' +
+            '<div><div style="font-weight:700; font-size:0.75rem; color:var(--danger-text); margin-bottom:0.4rem;">NEGATIVE DRIVERS (-)</div>' + negHtml + '</div>' +
+          '</div>' +
+        '</div>';
+
+      // 5. Interactive Profit Engine Waterfall
+      var wfRows = waterfall.map(function(node) {
+        var isNeg = node.amount < 0;
+        var color = node.type === 'final' ? (node.amount >= 0 ? 'var(--green)' : 'var(--danger-text)') : (isNeg ? 'var(--danger-text)' : 'var(--navy)');
+        return '<tr>' +
+          '<td><strong>' + node.label + '</strong></td>' +
+          '<td style="text-align:right; font-weight:700; color:' + color + ';">' + (isNeg ? '-' : '') + fc(Math.abs(node.amount)) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      var waterfallHtml =
+        '<div class="card" style="padding:1.25rem;">' +
+          '<div class="card-title" style="margin-bottom:0.5rem; color:var(--navy);">The Profit Engine (Interactive Waterfall)</div>' +
+          '<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.85rem;">Step-by-step financial flow from Gross Sales to Net Profit</div>' +
+          '<table><thead><tr><th>Financial Flow Stage</th><th style="text-align:right;">Amount (' + (CURRENCY_MAP[orgCurrency] || orgCurrency) + ')</th></tr></thead><tbody>' + wfRows + '</tbody></table>' +
+        '</div>';
+
+      container.innerHTML = confBanner + healthCards + attHtml + movementHtml + waterfallHtml;
     }
 
     // ── Sales ──
@@ -1051,7 +1130,8 @@ export default {
           path === '/api/v1/products/cogs' ||
           path === '/api/v1/reports/attention' ||
           path === '/api/v1/expenses' ||
-          path.startsWith('/api/v1/expenses/')) {
+          path.startsWith('/api/v1/expenses/') ||
+          path.startsWith('/api/v1/intelligence/')) {
         const obRes = await handleOnboardingRoutes(request, env, path, user);
         if (obRes) return obRes;
       }
